@@ -1,0 +1,7 @@
+questionparty.com didn't work, so we decided to redo it.
+
+This is a Python WSGI app. Requires the following:
+
+python
+twisted (python module)
+twisted-web
