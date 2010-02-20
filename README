@@ -5,3 +5,7 @@ This is a Python WSGI app. Requires the following:
 python
 twisted (python module)
 twisted-web
+
+to run, do the following command:
+    twistd -ny qp/questionparty.tac
+
