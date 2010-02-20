@@ -1,12 +1,17 @@
-from twisted.web import server, resource
+from twisted.web import static, server, resource
 from twisted.internet import reactor
 from qp import settings
+import os
 
-class Root(resource.Resource):
+root = static.File('%s/qp/static/' % os.getcwd())
+
+class Rpc(resource.Resource):
     isLeaf=True
     def render_GET(self, request):
-        return "lol, this is the index."
+        return "this will handle JSON-RPC eventually"
 
-site = server.Site(Root())
+root.putChild('rpc', Rpc()) 
+
+site = server.Site(root)
 reactor.listenTCP(settings.SERVER_PORT, site)
 reactor.run()
