@@ -3,8 +3,9 @@ questionparty.com didn't work, so we decided to redo it.
 This is a Python WSGI app. Requires the following:
 
 python
-twisted (python module)
-twisted-web
+twisted http://twistedmatrix.com/trac/
+twisted-web http://twistedmatrix.com/trac/wiki/TwistedWeb
+txJSON-RPC http://pypi.python.org/pypi/txJSON-RPC/
 
 to run, do the following command:
     twistd -ny qp/questionparty.tac
