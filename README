@@ -1,5 +1,10 @@
 questionparty.com doesn't seem to exist anymore, but we liked the idea, so we decided to redo it.
 
+The idea behind question party is simple: the user goes to the site, and gets presented with a question. They answer the question, and get to see what other people's answers were. The questions can be pulled from RSS feeds specified in the configuration file.
+
+
+== INSTALLATION ==
+
 This is a Twisted Python app. Requires the following:
 
 python
