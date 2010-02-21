@@ -7,7 +7,7 @@ The idea behind question party is simple: the user goes to the site, and gets pr
 
 This is a Twisted Python app. Requires the following:
 
-python
+python http://www.python.org/
 twisted http://twistedmatrix.com/trac/
 twisted-web http://twistedmatrix.com/trac/wiki/TwistedWeb
 txJSON-RPC http://pypi.python.org/pypi/txJSON-RPC/
