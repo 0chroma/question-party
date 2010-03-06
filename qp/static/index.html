@@ -2,34 +2,16 @@
 <html>
     <head>
         <title>Question Party!</title>
-        <script type="text/javascript" src="/dojotoolkit/dojo/dojo.js"></script>
+        <script type="text/javascript" src="/dojotoolkit/dojo/dojo.js" djConfig="parseOnLoad:true"></script>
 		<link href="/dojotoolkit/dojo/resources/dojo.css" rel="stylesheet" type="text/css" />
 		<link href="/dojotoolkit/dijit/themes/tundra/tundra.css" rel="stylesheet" type="text/css" />
 		<link href="/dojotoolkit/dojoc/sandbox/rounded/resources/Rounded.css" rel="stylesheet" type="text/css" />
         <link href="/main.css" rel="stylesheet" rel="stylesheet" type="text/css" />
 		<script type="text/javascript">
-			dojo.require("dijit.layout.BorderContainer");
-			dojo.require("dijit.layout.ContentPane");
-			dojo.require("dijit.form.Button");
-			dojo.require("dojoc.sandbox.rounded.Rounded");
-			dojo.require("dijit.form.TextBox");
-			dojo.addOnLoad(dojo.hitch(this, function() {
-				dojo.parser.parse();
+            dojo.require("qp.qp");
+            dojo.addOnLoad(function(){
 				qp.textStart();
-			}));
-			qp = new Object();
-			qp.textClear = function()
-			{
-				if(dijit.byId('answerEntry').getValue() == "Enter your answer here...") {
-					dijit.byId('answerEntry').setValue('');
-				}
-				
-			};
-			qp.textStart = function()
-			{
-				dijit.byId('answerEntry').setValue("Enter your answer here...");
-				dojo.connect(dijit.byId('answerEntry'), 'onFocus', qp.textClear);
-			};
+			});
 		</script>
     </head>
     <body class="tundra">
@@ -39,12 +21,14 @@
 				<div id="topBoxWTF"><a href="#">What is this<!--I don't even...-->?</a></div>
 			</div>
 			<div id="mainContent" region="center" dojoType="dijit.layout.ContentPane">
-				<h3>Question</h3>
-				<div dojoType="dojoc.sandbox.rounded.Rounded" id="question" bgImg="/dojotoolkit/dojoc/sandbox/rounded/resources/RoundedBg.png">Isn't it ironic that the Bible presents Jesus and his disciples as Palestinian terroists?</div>
-				<a href="#">Where did this question come from?</a><br /><br />
+				<h2>Question</h2>
+				<div dojoType="dojoc.sandbox.rounded.Rounded" id="question" bgImg="/dojotoolkit/dojoc/sandbox/rounded/resources/RoundedBg.png">
+                    Isn't it ironic that the Bible presents Jesus and his disciples as Palestinian terroists?
+                </div>
+				<a href="javascript:alert('Yahoo Answers(tm)');">Where did this question come from?</a><br /><br />
 				<input id="answerEntry" dojoType="dijit.form.TextBox"/><br /><br />
 				<div id="submitAnswerButton" dojoType="dijit.form.Button">Submit</div><br />
-				<div id="getAnotherQuestionButton" dojoType="dijit.form.Button">Get another question</div>
+				<div id="getAnotherQuestionButton" dojoType="dijit.form.Button">This is a lame question</div>
 			</div>
 		</div>
     </body>
