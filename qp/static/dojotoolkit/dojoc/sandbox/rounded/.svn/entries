@@ -1,0 +1,49 @@
+8
+
+dir
+36
+svn+ssh://svn.dojotoolkit.org/var/src/dojoc/sandbox/rounded
+svn+ssh://svn.dojotoolkit.org/var/src/dojoc
+
+
+
+2008-03-19T13:47:52.653441Z
+36
+dante
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+4a0934ac-1966-4701-a8ee-76657614ec89
+
+tests
+dir
+
+resources
+dir
+
+Rounded.js
+file
+37
+
+
+
+2008-03-19T14:10:40.000000Z
+82563e52c1701586f2e1f4ecc38dc2a5
+2008-03-19T14:07:52.781349Z
+37
+nonken
+
+templates
+dir
+

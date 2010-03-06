@@ -1,0 +1,40 @@
+8
+
+dir
+36
+svn+ssh://svn.dojotoolkit.org/var/src/dojoc/sandbox/rounded/templates
+svn+ssh://svn.dojotoolkit.org/var/src/dojoc
+
+
+
+2008-03-19T13:35:31.513569Z
+34
+nonken
+
+
+svn:special svn:externals svn:needs-lock
+
+
+
+
+
+
+
+
+
+
+
+4a0934ac-1966-4701-a8ee-76657614ec89
+
+Rounded.html
+file
+
+
+
+
+2008-03-19T13:53:16.000000Z
+7009c8396ee32b79f045c1f8229aec34
+2008-03-19T13:35:31.513569Z
+34
+nonken
+
