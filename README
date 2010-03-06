@@ -10,6 +10,7 @@ This is a Twisted Python app. Requires the following:
 python http://www.python.org/
 twisted http://twistedmatrix.com/trac/
 twisted-web http://twistedmatrix.com/trac/wiki/TwistedWeb
+SQLAlchemy http://www.sqlalchemy.org/
 txJSON-RPC http://pypi.python.org/pypi/txJSON-RPC/
 
 If you're having problems installing txJSON-RPC, download it manually and then make empty files for any files/folders it complains about.
