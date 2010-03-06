@@ -17,28 +17,33 @@ body, html{
 }
 #topBoxTitle {
 	float: left;
-	font-size: 50px;
+	font-size: 24pt;
 }
 #topBoxWTF {
 	float: right;
+    margin-top: 10px;
 }
 #mainContent {
 	text-align: center;
 }
 #question {
-	padding: 50px;
-	margin-left: 34%;
-	margin-right: 35%;
+	padding: 30px;
+	margin-left: auto;
+	margin-right: auto;
 	width: 25%;
 	font-size: 18px;
 }
 #answerEntry {
 	font-size: 20px;
 	padding: 5px;
-	color: grey;
 	height: 25px;
 	width: 20%;
 }
-#answerEntry:focus {
-    color: black;
+
+div.origin {
+    margin: 2em;
+}
+
+div.origin a {
+    color: #6767ff;
 }
