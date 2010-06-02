@@ -1,0 +1,11 @@
+to run, run 'run.sh' in the root dir.
+
+The only requirement is node.js > 0.1.25.
+
+You can find builds of node.js here:
+http://buildbot.nodejs.org:8010/one_box_per_builder
+
+and the source here:
+http://nodejs.org/#download
+
+If installing from source on a debian-based distro, you can use checkinstall to install node from source, that way it stays in a deb package and you can remove/upgrade it easily if need be
