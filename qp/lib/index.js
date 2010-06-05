@@ -10,7 +10,7 @@ require("jsgi-node").start(
 		require("pintura/jsgi/cascade").Cascade([ 
 		// cascade from static to pintura REST handling
 			// the main place for static files accessible from the web
-			require("pintura/jsgi/static").Static({urls:[""],roots:["public"]}),
+			require("pintura/jsgi/static").Static({urls:["", "/css", "/dojotoolkit"],roots:["public"]}),
 			require("pintura/jsgi/static").Static({urls:["/explorer"],roots:[require("nodules").getCachePath("persevere-client/")]}),
 			require("pintura/jsgi/static").Static({urls:["/js/dojo-persevere"],roots:[require("nodules").getCachePath("persevere-client/")]}),
 			// this will provide access to the server side JS libraries from the client
