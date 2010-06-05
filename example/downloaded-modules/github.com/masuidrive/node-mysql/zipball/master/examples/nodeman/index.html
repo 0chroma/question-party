@@ -1,0 +1,177 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+    "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<title>nodejs api search</title>
+<link rel="stylesheet" href="http://yui.yahooapis.com/2.7.0/build/reset-fonts-grids/reset-fonts-grids.css" type="text/css"> 
+<style>
+/* Layout */
+html, body { height: 100%; overflow: hidden; }
+#doc3 { margin: 0 !important; }
+#hd { height: 50px; }
+#ft { display: none; }
+
+/* Global style */
+* { font-family: "Lucida Grande", 'Lucida Sans', 'Lucida Sans', Lucida, sans-serif; }
+a { text-decoration: none; }
+
+/* Styles */
+#hd { background: #eee; color: #fff; }
+#hd h1 { line-height: 50px; margin: 0 8px; font-size: 197%; color: #000; }
+#bd { border-top: 1px solid #888; }
+
+/* Navigator styles */
+.navigator { border-right: 1px solid #888; }
+.keyword-box { background: #ddd; }
+#keyword { font-family: Helvetica, Arial, Verdana, sans-serif; }
+#keyword { font-size: 123.1%;/*16px*/ height: 24px; background: #fff; border: 1px solid #888; margin: 4px; padding: 0 4px; width: 282px; }
+
+#list { overflow: auto; height: 200px; }
+#list a { color: #000; }
+#list .label { font-size: 85%; font-weight: bold; background: #ddd; padding: 2px 4px; }
+#list .section { margin: 0 0 4px 0; }
+#list .item { overflow: hidden; display: block; padding: 4px 8px; }
+#list .item:hover { background: #D8F2F4; }
+#list .item .title { }
+#list .item .subtitle { color: #888; font-size: 77%; margin: 2px 0 0 0; }
+#list .item .arguments { color: #888; font-style: italic; }
+
+#content-wrap { margin: 0 0 0 -12px; }
+#content { border: 0; width: 100%; }
+
+#footer { position: absolute; bottom: 0px; width: 100%; text-align: center; color: #888; line-height: 31px; border-top: 1px solid #aaa; background: #fff; }
+#footer a  { color: #666; }
+</style>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.3.2/jquery.min.js"></script>
+<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/jquery-ui.min.js"></script>
+<script>
+// create inner link
+var create_link = function(id, inner) {
+  return '<a href="#" onclick="select_item(&quot;'+h(id)+'&quot;);return false;" class="item">'+inner+'</a>';
+}
+
+// Observe keyword field
+var searched_keyword = '';
+var search_state = 'DONE';
+setInterval(function() {
+  var keyword = $('#keyword').val();
+  if(keyword) {
+    if(keyword!=searched_keyword && search_state!='PROGRESS') {
+      search_state = 'PROGRESS';
+      $.getJSON("/json/search.json", {'query': keyword}, function(json) {
+        ['modules', 'functions', 'search'].forEach(function(sec) {
+          html = json[sec].map(function(item) {
+            var name = h(item.name || '').replace(/(\(.*)$/g,"<span class=\"arguments\">$1</span>");
+            var inner = '<div class="title">'+name+'</div><div class="subtitle">'+h(item.module_name || '')+'</div>';
+            return create_link(item.anchor, inner);
+          }).join("");
+          $("#list ."+sec+"-section").html(html);
+          searched_keyword = keyword;
+          search_state = 'DONE';
+        });
+      });
+    }
+  }
+  else {
+    load_modules();
+  }
+}, 1000);
+
+// 
+var loaded_modules = false;
+var load_modules = function() {
+  var render = function() {
+    $("#list .modules-section").html(loaded_modules);
+    $("#list .functions-section").html('');
+    $("#list .search-section").html('');
+  }
+  if(loaded_modules) {
+    render();
+  }
+  else {
+    $.getJSON("/json/modules.json", {}, function(json) {
+      html = json['modules'].map(function(item) {
+        var name = h(item.name || '').replace(/(\(.*)$/g,"<span class=\"arguments\">$1</span>");
+        var inner = '<div class="title">'+name+'</div><div class="subtitle">'+h(item.module_name || '')+'</div>';
+        return create_link(item.anchor, inner);
+      }).join("");
+      loaded_modules = html;
+      render();
+    });
+  }
+}
+
+// Select item
+var select_item = function(id) {
+  content_window.location.hash = id;
+  setTimeout(function() {
+    $('body').scrollTop(0);
+  }, 250);
+  $("#keyword").focus();
+}
+
+// Layout
+var layout = function() {
+  $('#list').height($(window).height()-$('#list').offset().top-32);
+  setTimeout(function() {
+    $('#content').height($(window).height()-$('#content').offset().top-32
+);
+  }, 250);
+}
+$(window).resize(layout);
+
+// Utils
+var h = (function(){
+  var map = {"<":"&lt;", ">":"&gt;", "&":"&amp;", "'":"&#39;", "\"":"&quot;", " ":"&nbsp;"};
+  var replaceStr = function(s){ return map[s]; };
+    return function(str) { return (str+"").replace(/<|>|&|\'|\"|\s/g, replaceStr); };
+})();
+
+// Start up
+var content_window;
+$(document).ready(function() {
+  content_window = $('#content')[0].contentWindow;
+  layout();
+  $("#keyword").focus();
+});
+</script>
+</head>
+<body>
+ <div id="doc3" class="yui-t3">
+  <div id="hd" role="banner">
+   <h1>nodejs api search</h1>
+  </div>
+  <div id="bd" role="main">
+   <div id="yui-main"><div class="yui-b"><div class="yui-g" id="content-wrap"> 
+    <div id="content-header">
+    </div>
+    <iframe src="api.html" id="content"></iframe>
+   </div></div></div><!-- /.yui-g .yui-b #yui-main-->
+   <div class="yui-b navigator">
+    <div class="keyword-box">
+     <input id="keyword"/>
+    </div>
+    <div id="list">
+     <div class="section">
+      <div class="modules-title label">Modules</div>
+      <div class="modules-section"></div>
+     </div>
+     <div class="section">
+      <div class="function-title label">Functions</div>
+      <div class="functions-section"></div>
+     </div>
+     <div class="section">
+      <div class="search-title label">Fulltext search</div>
+      <div class="search-section"></div>
+     </div>
+    </div><!-- /.list -->
+   </div><!-- /.yui-b -->
+  </div><!-- /#bd -->
+ </div><!-- /#doc3 -->
+ <div id="footer">
+  Powered by <a href="http://nodejs.org/">node.js</a> + <a href="http://github.com/masuidrive/node-mysql">node-mysql</a> + <a href="http://twitter.com/masuidrive_en">@masuidrive_en</a>.
+ </div>
+</body>
+</html>
+

@@ -1,0 +1,47 @@
+<html>
+	<head>
+		<title>Editing content</title>
+		<style type="text/css">
+			@import "css/edit.css";
+			@import "css/common.css";
+		</style>
+	</head>
+	<body>
+        <div id="headerContainer">
+			<div id="main-header">Editing page</div>
+        </div>
+        <div id="content">
+			<div id="user-name"></div>
+			<textarea id="content-area"></textarea>
+			<button id="save-button">Save</button>
+        </div>
+
+
+		<div id="login-form">
+			<label>Name:</label><input id="user" type="text" /><br />
+			<label>Password:</label><input id="password" type="password" /><br />
+			<button id="sign-in">Sign in</button>
+			<button id="register">Register</button>
+		</div>
+		<form id="upload-form" method="POST" enctype="multipart/form-data" target="upload-target" action="/Page/Example">
+			<label>Image to upload:</label><input type="file" name="image"/><br />
+			<button>Upload</input>
+			<iframe name="upload-target" style="display:none"></iframe>
+		</form>
+		<script>
+			// Configure RequireJS
+			require = {baseUrl: "lib/"};
+		</script>
+		<!-- You can use RequireJS or Yabble (obviously you should download this and have it available locally) -->
+		<script src="http://requirejs.org/docs/release/0.11.0/minified/transportD-require.js"></script>
+		<!--<script src="http://github.com/jbrantly/yabble/raw/master/lib/yabble.js"></script>-->
+		<script>
+			if(require.setModuleRoot){
+				// Configure Yabble
+				require.setModuleRoot("lib/");
+				require.useScriptTags();
+			}
+		</script>
+		<script src="lib/edit.js"></script>
+	</body>
+</html>

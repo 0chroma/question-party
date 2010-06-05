@@ -1,0 +1,35 @@
+{
+	"name": "perstore",
+	"author": "Kris Zyp",
+	"email": "kriszyp@gmail.com",
+	"dependencies": ["narwhal", "commonjs-utils"],
+	"contributors": [],
+	"keywords": [
+		"persistence",
+		"object",
+		"store",
+		"persevere"
+	],
+	"engines": {"node":">=0.1.30", "rhino": true},
+	"mappings": {
+		"tunguska": "jar:http://github.com/kriszyp/tunguska/zipball/master!/lib/",
+		"commonjs-utils": "jar:http://github.com/kriszyp/commonjs-utils/zipball/master!/lib/"
+	},
+	"overlay": {
+		"narwhal": {
+			"mappings": {
+				"fs-promise": "./engines/rhino/lib/fs-promise",
+				"store-engine": "./engines/rhino/lib/store-engine/"
+			}
+		},
+		"node": {
+			"mappings": {
+				"store-engine": "./engines/node/lib/store-engine/"
+			}
+		}
+	},
+	"githubName": "perstore",
+	"type": "zip",
+	"location": "http://github.com/kriszyp/perstore/zipball/master",
+	"license":"AFL/BSD"
+}

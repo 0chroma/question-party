@@ -1,0 +1,15 @@
+{
+	"name": "commonjs-utils",
+	"author": "Kris Zyp",
+	"dependencies": [],
+	"contributors": [],
+	"keywords": [
+		"json",
+		"schema",
+		"query"
+	],
+	"engines": {"node":">=0.1.30", "rhino": true},
+	"githubName": "commonjs-utils",
+	"type": "zip",
+	"location": "http://github.com/kriszyp/commonjs-utils/zipball/master"
+}
