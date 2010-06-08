@@ -9,5 +9,11 @@
 	},
 	"bypassSecurity": true,
 	"admins":["admin"],
-	"dataFolder": "data"
+	"dataFolder": "data",
+    "questionSources": [
+        {
+            "name": "Yahoo Answers",
+            "url": "http://answers.yahoo.com/rss/allq"
+        }
+    ]
 }
