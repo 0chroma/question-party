@@ -1,7 +1,6 @@
 var Model = require("model").Model,
     DefaultStore = require("perstore/stores").DefaultStore,
-
-var answerStore = DefaultStore("Answer");
+    answerStore = DefaultStore("Answer");
 
 exports.Answer = Model("Answer", answerStore, {
     properties: {
@@ -9,4 +8,5 @@ exports.Answer = Model("Answer", answerStore, {
         score: Number,
         questionId: Number
     }
-}
+});
+

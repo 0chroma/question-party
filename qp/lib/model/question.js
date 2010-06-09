@@ -1,7 +1,6 @@
 var Model = require("model").Model,
     DefaultStore = require("perstore/stores").DefaultStore,
-
-var questionStore = DefaultStore("Question");
+    questionStore = DefaultStore("Question");
 
 exports.Question = Model("Question", questionStore, {
     properties: {
@@ -16,4 +15,5 @@ exports.Question = Model("Question", questionStore, {
         question.answers = [];
         return question.save(directives);
     }
-}
+});
+

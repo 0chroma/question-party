@@ -3,6 +3,9 @@
  */
 
 // Defines the capabilities of the users, uncomment once you define access levels
-//require("access");
+require("access");
 
+//require("model/question");
+//require("model/answer");
+//require("facet/question");
 require("getQuestions");
