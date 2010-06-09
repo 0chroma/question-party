@@ -6,14 +6,17 @@ dojo.require("dijit.form.Button");
 dojo.require("dojoc.sandbox.rounded.Rounded");
 dojo.require("dijit.form.TextBox");
 dojo.require("dojox.data.PersevereStore");
+dojo.require("dijit.layout.StackContainer");
 
 var qp = {
     questionStore: null,
     answerStore: null,
+    stackContainer: null,
     answerPrefill: "Enter your answer here...",
     init: function(){
         this.textStart();
         this.createStores();
+        this.stackContainer = dijit.byId("stackContainer");
     },
     textClear: function(){
         var a = dijit.byId('answerEntry')
@@ -35,5 +38,11 @@ var qp = {
     createStores: function(){
         qp.questionStore = new dojox.data.PersevereStore({target: "/Question"});
         qp.answerStore = new dojox.data.PersevereStore({target: "/Answer"});
+    },
+    goToAnswers: function(){
+        qp.stackContainer.forward();
+    },
+    goToQuestion: function(){
+        qp.stackContainer.back();
     }
 }

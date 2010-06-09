@@ -23,7 +23,7 @@ body, html{
 	float: right;
     margin-top: 10px;
 }
-#mainContent {
+.mainPane {
 	text-align: center;
 }
 #question {
