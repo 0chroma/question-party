@@ -1,10 +1,10 @@
 dojo.provide("qp._base");
+
 dojo.require("dojo.parser");
 dojo.require("dijit.layout.BorderContainer");
 dojo.require("dijit.layout.ContentPane");
 dojo.require("dijit.form.Button");
 dojo.require("dojoc.sandbox.rounded.Rounded");
-dojo.require("dijit.form.TextBox");
 dojo.require("dojox.data.PersevereStore");
 dojo.require("dijit.layout.StackContainer");
 
@@ -39,10 +39,11 @@ var qp = {
         qp.questionStore = new dojox.data.PersevereStore({target: "/Question"});
         qp.answerStore = new dojox.data.PersevereStore({target: "/Answer"});
     },
-    goToAnswers: function(){
+    showAnswers: function(question){
         qp.stackContainer.forward();
+        //TODO: pass question onto answer widget
     },
-    goToQuestion: function(){
+    showQuestion: function(){
         qp.stackContainer.back();
     }
 }

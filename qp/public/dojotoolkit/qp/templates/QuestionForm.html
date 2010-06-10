@@ -1,0 +1,14 @@
+<div>
+    <h2>Question</h2>
+    <div dojoType="dojoc.sandbox.rounded.Rounded" id="question" bgImg="/dojotoolkit/dojoc/sandbox/rounded/resources/RoundedBg.png">
+        <div dojoAttachPoint="loadingNode"><img src="/dojotoolkit/dojo/resources/blank.gif" class="dojoxBusyButtonIcon" /> Loading Question...</div>
+        <div dojoAttachPoint="questionNode"></div>
+    </div>
+    <input id="answerEntry" dojoType="dijit.form.TextBox" dojoAttachPoint="answerBox" disabled /><br /><br />
+    <div id="submitAnswerButton" dojoType="dojox.form.BusyButton" dojoAttachPoint="submitButton" dojoAttachEvent="onClick:onSubmit" busyLabel="Answering..." disabled>Submit</div><br />
+
+    <div id="getAnotherQuestionButton" dojoType="dojox.form.BusyButton" dojoAttachPoint="lameButton" dojoAttachEvent="onClick:onLame" busyLabel="Marking as lame..." disabled>This is a lame question</div>
+    <div class="origin">
+        <a href="#" dojoAttachPoint="sourceLinkNode">Where did this question come from?</a>
+    </div>
+</div>

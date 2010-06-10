@@ -11,6 +11,7 @@ exports.PublicFacet = Restrictive(Question, {
         //make sure only score can be modified
         return Question.put(props, directives);
     },
+    post: function(props, directives){ return Question.post(props, directives); }, //TEMPORARY
     prototype: {
 
     },
