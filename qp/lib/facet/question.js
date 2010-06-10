@@ -7,12 +7,11 @@ exports.PublicFacet = Restrictive(Question, {
         //Question.checkQuery(query);
         return Question.query(query, options);
     },
-    put: function(props, directives){
-        //make sure only score can be modified
-        return Question.put(props, directives);
-    },
     post: function(props, directives){ return Question.post(props, directives); }, //TEMPORARY
     prototype: {
+        addSkip: function(source){
+            return source.addSkip();
+        }
     },
     quality: 0.5
 });

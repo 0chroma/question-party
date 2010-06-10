@@ -15,5 +15,6 @@
             "name": "Yahoo Answers",
             "url": "http://answers.yahoo.com/rss/allq"
         }
-    ]
+    ],
+    "maxSkips": 200
 }
