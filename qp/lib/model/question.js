@@ -1,3 +1,5 @@
+require("perstore/resource-query").operators.random = function(){ return this[Math.floor(Math.random() * this.length)];}; //for getting a random question
+
 var Model = require("model").Model,
     DefaultStore = require("perstore/stores").DefaultStore,
     questionStore = DefaultStore("Question");

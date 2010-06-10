@@ -13,7 +13,6 @@ exports.PublicFacet = Restrictive(Question, {
     },
     post: function(props, directives){ return Question.post(props, directives); }, //TEMPORARY
     prototype: {
-
     },
     quality: 0.5
 });

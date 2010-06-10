@@ -14,11 +14,17 @@ dojo.declare("qp.QuestionForm", [dijit._Widget, dijit._Templated], {
         
     },
     loadQuestion: function(){
-        
+        qp.questionStore.fetch({
+            query: "?random()",
+            onComplete: dojo.hitch(this, function(item){
+                this.setQuestion(item);
+            }),
+        });
     },
     setQuestion: function(item){
         var text = qp.questionStore.getValue(item, "text");
         this._showQuestion(text);
+        this._oldSourceLink = qp.questionStore.getValue(item, "sourceUrl");
         this._enable();
     },
     onSubmit: function(){
@@ -30,6 +36,7 @@ dojo.declare("qp.QuestionForm", [dijit._Widget, dijit._Templated], {
         this.submitButton.attr("disabled", true);
         this.answerBox.attr("disabled", true);
         //mark as lame
+        this.loadQuestion();
     },
     _enable: function(){
         this.lameButton.cancel();

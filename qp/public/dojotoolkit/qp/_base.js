@@ -17,6 +17,7 @@ var qp = {
         this.textStart();
         this.createStores();
         this.stackContainer = dijit.byId("stackContainer");
+        dijit.byId("questionForm").loadQuestion();
     },
     textClear: function(){
         var a = dijit.byId('answerEntry')
