@@ -25,8 +25,8 @@ dojo.declare("qp.AnswerForm", [dijit._Widget, dijit._Templated], {
         qp.answerStore.fetch({
             query: "?questionId="+questionId+"&sort(-score)",
             onComplete: dojo.hitch(this, function(results){
-                if(results.length == 1)
-                    results = [results];
+                if(results.length <= 1)
+                    return qp.showQuestion();
                 dojo.forEach(results, dojo.hitch(this, function(item){
                     var row = dojo.create("div", {class: "answerChoiceRow"});
                     var text = dojo.create("span");
