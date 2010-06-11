@@ -6,7 +6,10 @@ exports.Answer = Model("Answer", answerStore, {
     properties: {
         text: String,
         score: Number,
-        questionId: Number
+        questionId: {
+            type: Number,
+            indexed: true
+        }
     },
     construct: function(answer, directives){
         answer.score = 0;

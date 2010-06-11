@@ -1,9 +1,10 @@
 <div>
     <h2>Answers</h2>
-    <p>Here's how other people answered, which one is thie best?</p>
-    <ul>
-        <li>Yes <a href="#" onclick="qp.goToQuestion();">Vote</a></li>
-        <li>No <a href="#" onclick="qp.goToQuestion();">Vote</a></li>
-        <li>Maybe <a href="#" onclick="qp.goToQuestion();">Vote</a></li>
-    </ul>
+    <div dojoType="dojoc.sandbox.rounded.Rounded" class="question" bgImg="/dojotoolkit/dojoc/sandbox/rounded/resources/RoundedBg.png">
+        <div dojoAttachPoint="loadingNode"><img src="/dojotoolkit/dojo/resources/blank.gif" class="dojoxBusyButtonIcon" /> Loading Answers...</div>
+        <div dojoAttachPoint="questionNode"></div>
+    </div>
+    <p>Great job! Here's how everyone answered, which one is the best?</p>
+    <div dojoAttachPoint="answerChoiceNode" class="answerChoices"></div>
+    <div dojoType="dojox.form.BusyButton" dojoAttachPoint="submitButton" dojoAttachEvent="onClick:onSubmit" label="Vote" busyLabel="Voting..."></div>
 </div>

@@ -24,7 +24,7 @@ var qp = {
     },
     showAnswers: function(question){
         qp.stackContainer.forward();
-        dijit.byId("answerForm")
+        dijit.byId("answerForm").fetchAnswers(question);
         //TODO: pass question onto answer widget
     },
     showQuestion: function(){

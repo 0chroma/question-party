@@ -4,7 +4,7 @@ var Answer = require("model/answer").Answer,
 
 exports.PublicFacet = Restrictive(Answer, {
     query: function(query, options){
-        Answer.checkQuery(query);
+        //Answer.checkQuery(query);
         return Answer.query(query, options);
     },
     put: function(props, directives){

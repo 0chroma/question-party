@@ -7,7 +7,7 @@ exports.PublicFacet = Restrictive(Question, {
         //Question.checkQuery(query);
         return Question.query(query, options);
     },
-    post: function(props, directives){ return Question.post(props, directives); }, //TEMPORARY
+    put: function(props, directives){ return Question.post(props, directives); }, //TEMPORARY
     prototype: {
         addSkip: function(source){
             return source.addSkip();
