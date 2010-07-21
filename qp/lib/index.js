@@ -28,7 +28,7 @@ require("jsgi-node").start(
 );
 
 // having a REPL is really helpful
-require("repl").start().scope.require = require;
+require("repl").start();
 
 // this is just to ensure the static analysis preloads the explorer package
 false&&require("persevere-client/explorer/explorer.js"); 
