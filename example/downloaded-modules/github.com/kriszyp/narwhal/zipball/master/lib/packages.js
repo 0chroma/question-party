@@ -215,7 +215,7 @@ exports.read = function read(prefixes, catalog, usingCatalog, options) {
 
                 // if a dependency is referring to a 'using' package ID we add the
                 // package being referenced to the system package catalog
-                if(packageDatum.dependencies) {
+                if(packageDatum.dependencies && packageDatum.dependencies.forEach) {
                     packageDatum.dependencies.forEach(function(dependency) {
                         if(Object.prototype.hasOwnProperty.call(usingCatalog, dependency) &&
                            !Object.prototype.hasOwnProperty.call(catalog, dependency)) {
@@ -295,7 +295,7 @@ var scan = function scan(catalog, name) {
     if (!packageDatum)
         throw name;
     try {
-        if (packageDatum.dependencies) {
+        if (packageDatum.dependencies && packageDatum.dependencies.forEach) {
             packageDatum.dependencies.forEach(function (dependency) {
                 scan(catalog, dependency);
             });

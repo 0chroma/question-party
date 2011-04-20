@@ -41,8 +41,8 @@ exports.Directory = function(root, app) {
     root = file.absolute(root);
     app = app || require("./file").File(root);
     return function(env) {
-        var scriptName = utils.unescape(env["SCRIPT_NAME"]),
-            pathInfo = utils.unescape(env["PATH_INFO"]);
+        var scriptName = utils.unescape(env.scriptName),
+            pathInfo = utils.unescape(env.pathInfo);
         
         if (pathInfo.indexOf("..") >= 0)
             return utils.responseForStatus(403);

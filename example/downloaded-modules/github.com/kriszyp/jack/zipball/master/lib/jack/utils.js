@@ -77,10 +77,10 @@ exports.responseForStatus = function(status, optMessage) {
     };
 }
 
-exports.parseQuery      = require("jack/querystring").parseQuery;
-exports.toQueryString   = require("jack/querystring").toQueryString;
-exports.unescape        = require("jack/querystring").unescape;
-exports.escape          = require("jack/querystring").escape;
+exports.parseQuery      = require("./querystring").parseQuery;
+exports.toQueryString   = require("./querystring").toQueryString;
+exports.unescape        = require("./querystring").unescape;
+exports.escape          = require("./querystring").escape;
 
 
 var EOL = "\r\n";
@@ -138,6 +138,7 @@ exports.parseMultipart = function(request, options) {
                                 tempfile = options.uploadedFilepath(filename, contentType, name);
                         	}
                         	else{
+                        		file.mkdirs("tmp");
 	                            tempfile = "tmp/jackupload-"+Math.round(Math.random()*100000000000000000).toString(16);
                         	}
 	                        body = file.open(tempfile, "wb");
@@ -165,9 +166,7 @@ exports.parseMultipart = function(request, options) {
                 temp.write(buf);
                 temp.write(bytes);
                 
-                var c = bytes.decodeToString("UTF-8");
-
-                buf += c;
+                buf = temp.toByteString();
                 contentLength -= bytes.length;
             }
 

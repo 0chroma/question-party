@@ -4,14 +4,15 @@
  * HTTP is a stateless protocol for a *good* reason. Try to avoid using 
  * session variables. 
  */
-var Session = exports.Session = function(env) {
-    if (!env["jsgi.session"]) {
+var Session = exports.Session = function(request) {
+    if (!request.env.jack) request.env.jack = {};
+    if (!request.env.jack.session) {
         try {
-            env["jsgi.session"] = env["jsgi.session.loadSession"](env);
+            request.env.jack.session = request.env.jack.session.loadSession(request);
         } catch (err) {
-            env["jsgi.session"] = {};
+            request.env.jack = {};
         }
     }
                 
-    return env["jsgi.session"];
+    return request.env.jack.session;
 }

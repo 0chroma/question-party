@@ -1,19 +1,25 @@
-var ShowExceptions = exports.ShowExceptions = function(app) {
+var when = require("promise").when;
+
+var ShowExceptions = exports.ShowExceptions = function(nextApp) {
     return function(request) {
-        try {
-            return app(request);
-        } catch (e) {
-            var backtrace = "<html><body><pre>" + e.name + ": " + e.message;
-            if (e.rhinoException) {
-                //TODO we need a narwhal stack trace abstraction
-                backtrace += "\n" + e.rhinoException.getScriptStackTrace();
+        return when(nextApp(request),
+            function(response) {
+                return response;
+            },
+            function(e) {
+                var backtrace = "<html><body><pre>" + e.name + ": " + e.message;
+                if (e.rhinoException) {
+                    //FIXME abstract and move to engines/rhino
+                    backtrace += "\n" + e.rhinoException.getScriptStackTrace();
+                }
+                // FIXME add a branch for node: e.stack?
+                backtrace += "</body></html>";
+                return {
+                    status: 500,
+                    headers: {"content-type":"text/html", "content-length": backtrace.length + ""},
+                    body: [backtrace]
+                };
             }
-            backtrace += "</body></html>";
-            return {
-                status : 500,
-                headers : {"content-type":"text/html","content-length":String(backtrace.length)},
-                body : [backtrace]
-            };
-        }
+        );
     }
 }

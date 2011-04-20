@@ -1,8 +1,8 @@
 var Request = require("./request").Request,
     Response = require("./response").Response;
 
-exports.app = function(env) {
-    var req = new Request(env),
+exports.app = function(request) {
+    var req = new Request(request),
         narwhal = "",
         href = "";
 
@@ -22,7 +22,6 @@ exports.app = function(env) {
     }
 
     var res = new Response();
-    res.headers["content-type"] = "text/html";
     
     res.write("<title>Narwhalicious!</title>");
     res.write("<p><a href='"+href+"'>flip!</a></p>");

@@ -4,27 +4,26 @@ exports.Redirect = function (path, status) {
     
     status = status || 301;
     
-    return function (env) {
-        var location = 
-            (env.scheme || "http") +
-            "://" + 
-            (env.headers.host || (
-                env.serverName +
-                (env.serverPort == "80" ? "" : ":" + env.serverPort)
+    return function (request) {
+        var location =
+            (request.scheme || "http") +
+            "://" +
+            (request.headers.host || (
+                request.host +
+                (request.port == 80 ? "" : ":" + request.port)
             )) +
-            (env.scriptName || "") +
-            env.pathInfo;
-
-        location = path ? uri.resolve(location, path) : env.headers.referer;
-
+            (request.scriptName || "") +
+            request.pathInfo;
+        
+        location = path ? uri.resolve(location, path) : request.headers.referer;
+        
         return {
-            status : status,
-            headers : {
-                "Location": location,
-                "Content-type": "text/plain"
+            status: status,
+            headers: {
+                "location": location,
+                "content-type": "text/plain"
             },
-            body : ['Go to <a href="' + location + '">' + location + "</a>"]
-        };
-    };
-};
-
+            body: ['Go to <a href="' + location + '">' + location + "</a>"]
+        }
+    }
+}

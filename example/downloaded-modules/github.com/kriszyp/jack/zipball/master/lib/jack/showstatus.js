@@ -10,8 +10,7 @@
  * http://github.com/gmosx/nitro
  */
 
-var HashP = require("hashp").HashP,
-    Request = require("./request").Request,
+var Request = require("./request").Request,
     HTTP_STATUS_CODES = require("./utils").HTTP_STATUS_CODES,
     sprintf = require("printf").sprintf;
 
@@ -20,30 +19,29 @@ var escapeHTML = function(str) {
 };
 
 var ShowStatus = function(app) {
-    return function(env) {
-        var response = app(env);
-
-        // client or server error, or explicit message
-        if ((response.status >= 400 && response.body.length == 0) || env['jack.showstatus.detail']) {
-            var req = new Request(env);
-            var status = HTTP_STATUS_CODES[response.status] || String(response.status);
-
-            response.body = [
-                sprintf(template,
-                    escapeHTML(status),
-                    escapeHTML(req.scriptName() + req.pathInfo()),
-                    escapeHTML(status),
-                    response.status,
-                    escapeHTML(req.requestMethod()),
-                    escapeHTML(req.uri()),
-                    escapeHTML(env["rack.showstatus.detail"] || status)
-                )
-            ];
-
-            HashP.set(response.headers, "Content-Type", "text/html");
-        }
-
-        return response;
+    return function(request) {
+        return when(app(request), function(response) {
+            // client or server error, or explicit message
+            if ((response.status >= 400 && response.body.length == 0) || request.env.jack.showstatus.detail) {
+                var req = new Request(request);
+                var status = HTTP_STATUS_CODES[response.status] || String(response.status);
+                
+                response.body = [
+                    sprintf(template,
+                        escapeHTML(status),
+                        escapeHTML(req.scriptName() + req.pathInfo()),
+                        escapeHTML(status),
+                        response.status,
+                        escapeHTML(req.requestMethod()),
+                        escapeHTML(req.uri()),
+                        escapeHTML(request.env.jack.showstatus.detail || status)
+                    )
+                ];
+    
+                response.headers["content-type"] = "text/html";
+            }
+            return response;
+        });
     }
 };
 

@@ -44,7 +44,7 @@ parser.option("-r", "--reload", "reload")
 parser.option("-V", "--version")
     .help("print Jackup version number and exit.")
     .action(function () {
-        this.print("Jackup Version 0.2");
+        this.print("Jackup Version 0.3");
         this.exit();
     });
     
@@ -143,7 +143,7 @@ exports.start = function(options) {
     
     if (handler && typeof handler.run !== "function")
         throw new Error("Jack handler must be a function, is: " + handler.run);
-    
+
     return handler.run(app, options);
 };
 

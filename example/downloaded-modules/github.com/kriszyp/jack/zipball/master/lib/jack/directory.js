@@ -1,4 +1,3 @@
-
 var util = require("util");
 
 exports.Directory = function (paths, notFound) {
@@ -6,40 +5,40 @@ exports.Directory = function (paths, notFound) {
         paths = {};
     if (!notFound)
         notFound = exports.notFound;
-    return function (env) {
-        if (!/^\//.test(env.PATH_INFO)) {
+    return function (request) {
+        if (!/^\//.test(request.pathInfo)) {
             var location = 
-                (env['jsgi.url_scheme'] || 'http') +
+                (request.scheme || 'http') +
                 '://' + 
-                (env.HTTP_HOST || (
-                    env.SERVER_NAME +
-                    (env.SERVER_PORT == "80" ? "" : ":" + env.SERVER_PORT)
+                (request.headers.host || (
+                    request.host +
+                    (request.port == "80" ? "" : ":" + request.port)
                 )) +
-                (env.SCRIPT_NAME || '') +
-                env.PATH_INFO + "/";
+                (request.scriptName || '') +
+                request.pathInfo + "/";
             return {
                 status : 301,
                 headers : {
-                    "Location": location,
-                    "Content-type": "text/plain"
+                    "location": location,
+                    "content-type": "text/plain"
                 },
                 body : ['Permanent Redirect: ' + location]
             };
         }
-        var path = env.PATH_INFO.substring(1);
+        var path = request.pathInfo.substring(1);
         var parts = path.split("/");
         var part = parts.shift();
         if (util.has(paths, part)) {
-            env.SCRIPT_NAME = env.SCRIPT_NAME + "/" + part;
-            env.PATH_INFO = path.substring(part.length);
-            return paths[part](env);
+            request.scriptName = request.scriptName + "/" + part;
+            request.pathInfo = path.substring(part.length);
+            return paths[part](request);
         }
-        return notFound(env);
+        return notFound(request);
     };
 };
 
-exports.notFound = function (env) {
-    return utils.responseForStatus(404, env.PATH_INFO);
+exports.notFound = function (request) {
+    return utils.responseForStatus(404, request.pathInfo);
 };
 
 if (require.main == module.id) {
@@ -49,7 +48,7 @@ if (require.main == module.id) {
             "": function () {
                 return {
                     status : 200,
-                    headers : {"Content-type": "text/plain"},
+                    headers : {"content-type": "text/plain"},
                     body : ["Hello, World!"]
                 };
             }

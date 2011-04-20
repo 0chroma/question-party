@@ -5,6 +5,7 @@ var defer = require("./promise").defer,
 	when = require("./promise").when,
 	LazyArray = require("./lazy-array").LazyArray,
 	http = require("http"),
+	https = require("https"),
 	parse = require("url").parse;
 
 // configurable proxy server setting, defaults to http_proxy env var
@@ -22,13 +23,21 @@ exports.request = function(request){
 		request.pathname = request.url;
 		var proxySettings = parse(exports.proxyServer);
 		request.port = proxySettings.port; 
-		request.host = proxySettings.hostname;
+		request.protocol = proxySettings.protocol;
+		request.hostname = proxySettings.hostname;
 	}
-	
-	var client = http.createClient(request.port || 80, request.host);
-
-	var req = client.request(request.method || "GET", request.pathname || request.pathInfo, request.headers || {host: request.hostname});
+	var secure = request.protocol.indexOf("s") > -1;
+	request.port = request.port || (secure ? 443 : 80);
+	request.headers = request.headers || {host: request.host};
+	request.host = request.hostname;
+	request.method = request.method || "GET";
+	request.path = request.pathname || request.pathInfo || "";
+	if (request.queryString) {
+	  request.path += "?"+request.queryString;
+	}
 	var timedOut;
+
+	var req = (secure ? https : http).request(request);
 	req.addListener("response", function (response){
 		if(timedOut){
 			return;

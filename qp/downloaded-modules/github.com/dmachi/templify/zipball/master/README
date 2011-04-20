@@ -1,0 +1,77 @@
+templify is a small template system written in javascript.  
+
+##Example use:
+
+Instantiate a template (which returns a function), and render the template by passing it a context
+
+    node>var template = require("templify/template").Template;
+    node>var compiled = template("{{foo}}");
+    node>compiled({foo: "test me"});
+    'test me'
+
+Combined compile/render with renderTemplate()
+
+    node>var rt = require("templify/templify").renderTemplate;
+    node>rt("{{foo}}",{foo: "blah"});
+    'blah'
+
+An example of using templify to create a media handler can be seen in the Pintura package's html media handler. It looks something like this:
+
+	//load a store where we will retrieve our templates
+    	filesystem = require("perstore/store/filesystem").FileSystem({fsRoot: "templates"}),
+
+	//setup a resolver, in this case we're just using the default
+	resolver = require("templify/templify").Resolver;
+
+	// instantiate a template engine
+        var templateEngine =  require('templify/templify').TemplateEngine({resolver: resolver, store: filesystem});
+
+	//use the template engine to render an object as html
+
+        var template = templateEngine.compile(templateId);
+	rendered = template(object);
+       	 
+
+##Template Syntax:
+
+###Statements:
+
+	Statements are opened and closed with {% and %} by default and are in the form : {%someStatement args%}
+
+* extend `{%extend fooTemplate%}` extents one template from another.  When using an extension, the base template is used and any blocks provided by the extender override blocks in the base class
+
+* block `{%block someBlock%}` - Defines a block, which extends an existing block or can be extended by someone who extends in the future
+
+* include `{%include fooTemplate%}` include one template from another.  include, as with extend, block, and render use the resolver to transform a referenced template to an actual template string.
+
+* render - `{%render fooTemplate with someObj%} similar to include, this allows another template to be loaded.  However, instead of using the existing context as the root, a root context is provided.
+
+* foreach - `{%foreach element in object%} {{element.name}}{%/foreach%}   Loops over arrays 
+
+* for `{%for element in object%}{{element.name}}{%/for%} loops over objects
+
+* if `{%if condition%} .... {%/if%}   conditional, i'm guessing few people read this doc without being able to guess what this does :)
+
+* else/elseif `{%if condition%} .... {%/if%}{%elseif condition%} ... {%/elseif%}{%else%} ... {%/else%}
+
+* cdata `{%cdata} ..... {%/cdata} Escape's content
+
+
+
+### Print
+
+Printing can be achieved by using ${variable}}  or {{variable}} 
+
+
+### Script
+
+Scripts can be included by wrappting them in <% %>
+
+    <%  
+       foo.bar=baz;
+    %>
+
+
+### Comments
+
+Comments are included by wrapping them with {#  #}.  Currently, this is configured to output comments surrounded by <!-- --> in the final html to ease debugging.

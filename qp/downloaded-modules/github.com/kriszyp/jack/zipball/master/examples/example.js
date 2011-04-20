@@ -31,21 +31,25 @@ var form = '<form action="" method="get"><input type="text" name="name" value=""
 map["/"] = function(request) {
     var req = new Jack.Request(request),
         res = new Jack.Response();
-    res.headers["content-type"] = "text/html";
-
-    res.write('hello ' + (req.GET("name") || form) +"<br />");
     
-    res.write('<a href="hello">hello</a><br />');
-    res.write('<a href="httproulette">httproulette</a><br />');
-    res.write('<a href="narwhal">narwhal</a><br />');
-    res.write('<a href="stream">stream</a><br />');
-    res.write('<a href="stream1">stream1</a><br />');
-    res.write('<a href="cookie">cookie</a><br />');
-    res.write('<a href="examples">examples</a><br />');
-    res.write('<a href="info">info</a><br />');
-
+    res.write('hello ' + (req.GET("name") || form) + "<br />");
+    [
+        "hello",
+        "httproulette",
+        "drinkinggame",
+        "narwhal",
+        "stream",
+        "stream1",
+        "cookie",
+        "examples",
+        "info"
+    ].forEach(function(item) {
+        res.write('<a href="' + item + '">' + item + '</a><br />');
+    });
     return res.finish();
 }
+
+map["/drinkinggame"] = require("./statuscodedrinkinggame").app;
 
 map["/narwhal"] = Jack.Narwhal;
 
@@ -63,7 +67,7 @@ map["/files"] = Jack.File(".");
 map["/stream"] = function(request) {
     return {
         status : 200,
-        headers : {"content-type":"text/html", "transfer-encoding":"chunked"},
+        headers : {"content-type":"text/html", "transfer-encoding": "chunked"},
         body : { forEach : function(write) {
             for (var i = 0; i < 50; i++) { 
                 java.lang.Thread.currentThread().sleep(100); 
@@ -75,7 +79,7 @@ map["/stream"] = function(request) {
 
 
 map["/stream1"] = function(request) {
-    var res = new Jack.Response(200, {"transfer-encoding":"chunked"});
+    var res = new Jack.Response(200, {"transfer-encoding": "chunked"});
     return res.finish(function(response) {
         for (var i = 0; i < 50; i++) { 
             java.lang.Thread.currentThread().sleep(100); 
@@ -85,48 +89,49 @@ map["/stream1"] = function(request) {
 }
 
 map["/cookie"] = function(request) {
-    request = new Jack.Request(env);
-    var response = new Jack.Response();
-    
-    var name = request.POST("name");
+    var req = new Jack.Request(request),
+        res = new Jack.Response();
+        
+    var name = req.POST("name");
     
     if (typeof name === "string") {
-        response.write("setting name: " + name + "<br />");
-        response.setCookie("name", name);
+        res.write("setting name: " + name + "<br />");
+        res.setCookie("name", name);
     }
     
-    var cookies = request.cookies();
+    var cookies = req.cookies();
     if (cookies["name"])
         response.write("previously saved name: " + cookies["name"] +"<br />")
         
-    response.write('<form action="cookie" method="post" enctype="multipart/form-data">');
-    response.write('<input type="text" name="name" value="" id="some_name">');
-    response.write('<input type="submit" value="go"></form>');
+    res.write('<form action="cookie" method="post" enctype="multipart/form-data">');
+    res.write('<input type="text" name="name" value="" id="some_name">');
+    res.write('<input type="submit" value="go"></form>');
     
     return response.finish();
 }
 
 map["/info"] = function(request) {
-    var response = new Jack.Response(200, {"content-type" : "text/plain"});
+    var req = new Jack.Request(request),
+        res = new Jack.Response(200, { "content-type" : "text/plain" });
     
-    var params = new Jack.Request(request).params();
+    var params = req.params();
     
-    response.write("========================= params =========================\n");
+    res.write("========================= params =========================\n");
     
     for (var i in params)
-        response.write(i + "=>" + params[i] + "\n")
+        res.write(i + "=>" + params[i] + "\n")
     
-    response.write("========================= env =========================\n");
+    res.write("========================= env =========================\n");
     
-    for (var i in request)
-        response.write(i + "=>" + request[i] + "\n")
+    for (var i in env)
+        res.write(i + "=>" + env[i] + "\n")
     
-    response.write("========================= system.env =========================\n");
+    res.write("========================= system.env =========================\n");
     
     for (var i in system.env)
-        response.write(i + "=>" + system.env[i] + "\n")
+        res.write(i + "=>" + system.env[i] + "\n")
 
-    return response.finish();
+    return res.finish();
 }
 
 map["/examples"] = Jack.Directory(".");
@@ -134,4 +139,4 @@ map["/examples"] = Jack.Directory(".");
 // middleware:
 
 // apply the URLMap
-exports.app = Jack.ContentLength(Jack.URLMap(map));
+exports.app = Jack.URLMap(map);

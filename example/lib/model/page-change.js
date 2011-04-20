@@ -2,13 +2,14 @@
  * This class is used for tracking all the changes of a page
  */
 
-var Model = require("model").Model,
+var Model = require("perstore/model").Model,
 	DefaultStore = require("perstore/stores").DefaultStore,
 	auth = require("pintura/jsgi/auth");
 
 // This class contains  
-var pageChangeStore = DefaultStore("PageChange");
-/* We can switch to the SQL based back-end with: 
+var pageChangeStore = DefaultStore();
+/* We can switch to different back-ends with:
+// SQL:
 pageChangeStore = SQLStore({
 	table: "PageChange",
 	idColumn: "id"
@@ -20,7 +21,7 @@ pageChangeStore = SQLStore({
 */
 
 // now we create a class, all central model logic is defined here 
-exports.PageChange = Model("PageChange", pageChangeStore, {
+exports.PageChange = Model(pageChangeStore, {
 	properties: {
 		content: String,
 		pageId: {

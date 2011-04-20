@@ -1,11 +1,14 @@
-require("json");
-var pageName = location.search.match(/page=([^&]+)/);
-pageName = pageName && pageName[1];
+var JSON = require("commonjs-utils/json");
+
+pageName = location.search.match(/page=([^&]+)/);
+pageName = decodeURIComponent(pageName && pageName[1]);
+require("monitor");
+
 document.title = "Editing " + pageName;
-var request = require("commonjs-utils/jsgi-client").request;
+var request = require("promised-io/http-client").request;
 document.getElementById("main-header").innerHTML = escapeHTML("Editing " + pageName);
 request({
-	uri: "Page/" + pageName,
+	url: "Page/" + pageName,
 	headers: {
 		"accept": "application/javascript, application/json"
 	}
@@ -22,11 +25,13 @@ request({
 	}
 	var contentArea = document.getElementById("content-area");
 	contentArea.value = page.content;
-
-	document.getElementById("save-button").onclick = function(){
+	var byId = function(id){
+		return document.getElementById(id);
+	};
+	byId("save-button").onclick = function(){
 		page.content = contentArea.value;
 		request({
-			uri: "/Page/" + pageName,
+			url: "/Page/" + pageName,
 			method: "PUT",
 			body: JSON.stringify(page),
 			headers: {
@@ -39,6 +44,17 @@ request({
 		}, errorHandler);
 	};
 
+	byId("insert-image").onclick = function(){
+		var uploadForm = byId("upload-form");
+		uploadForm.action = "/File/?" + document.cookie.match(/pintura-session=\w+/)[0];
+		uploadForm.style.display = "block";
+		byId("upload-target").onload = function(){
+			var imgHref = byId("upload-target").contentWindow.document.getElementsByTagName("link")[2].href;
+			uploadForm.style.display = "none";
+			byId("content-area").focus();
+			document.execCommand("insertHTML", false, '[[Image:' + imgHref + ']]');
+		};
+	};
 }, errorHandler);
 
 function login(){
@@ -58,26 +74,24 @@ function login(){
 
 function userRpc(method, params){
 	return request({
-		uri: "Class/User",
+		url: "User/",
 		method: "POST",
 		body: JSON.stringify({
 			id:"call-id",
 			method: method,
-			params: [
-				document.getElementById("user").value,
-				document.getElementById("password").value
-			]
+			user: document.getElementById("user").value,
+			password: document.getElementById("password").value
 		}),
 		headers: {
 			"accept": "application/javascript, application/json",
 			"content-type": "application/json"
 		}
 	}).then(function(response){
-		response = eval('(' + response.body.join("") + ')');
-		if(response.error){
-			throw response.error;
+		var body = eval('(' + response.body.join("") + ')');
+		if(response.status > 300){
+			throw new Error(body);
 		}
-		return response.result;
+		return body;
 	});
 	}
 

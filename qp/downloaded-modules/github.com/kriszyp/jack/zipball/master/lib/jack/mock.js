@@ -60,7 +60,8 @@ MockRequest.requestFor = function(method, uri, opts) {
         	multiprocess: true,
         	runOnce: false
     	},
-    	headers: {}
+    	headers: {},
+    	body: opts.body
     };
 
     request.method   = method || "GET";
@@ -72,8 +73,9 @@ MockRequest.requestFor = function(method, uri, opts) {
     request["jsgi.url_scheme"]  = uri.scheme || "http";
 
     request["SCRIPT_NAME"]      = opts["SCRIPT_NAME"] || "";
-
-    request.headers["content-length"]   = request.jsgi.body.length.toString(10);
+	if(request.body){
+    	request.headers["content-length"]   = request.body.length.toString(10);
+	}
 
     // FIXME: JS can only have String keys unlike Ruby, so we're dumping all opts into the request here.
     for (var i in opts)

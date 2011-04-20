@@ -6,7 +6,6 @@ var system = require("system"),
     util = require('util'),
     replEval = eval;
 
-
 try {    
     var SharedWorker = require("worker").SharedWorker,
         queue = require("event-loop");
@@ -26,25 +25,25 @@ try {
     };
 }
 catch(e) {
+	print("non-worker based repl");
     // workers are not available
     exports.repl = require("narwhal/repl-worker").startRepl(evaluateAndPrint);
 }
 
 function evaluateAndPrint(text) {
+    this.require = require;
     try {
         var result = replEval(text);
         var repr = util.repr(result);
         if (repr.length > 76 || /\n/.test(repr))
             repr = String(result);
         if (!util.no(result)) {
-            system.stdout.write(repr + '\n');
-            system.stdout.flush();
+            print(repr + '\n');
             global._ = result;
         }
 
     } catch (e) {
-        system.stdout.write("    exception from uncaught JavaScript throw: " + e + "\n");
-        system.stdout.flush();
+        print("    exception from uncaught JavaScript throw: " + e + "\n");
     }
     
 }

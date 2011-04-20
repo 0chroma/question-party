@@ -1,12 +1,12 @@
-require("perstore/resource-query").operators.random = function(){ return this[Math.floor(Math.random() * this.length)];}; //for getting a random question
+//require("perstore/resource-query").operators.random = function(){ return this[Math.floor(Math.random() * this.length)];}; //for getting a random question
 var settings = require("commonjs-utils/settings")
 var Answer = require("model/answer").Answer;
 
-var Model = require("model").Model,
+var Model = require("perstore/model").Model,
     DefaultStore = require("perstore/stores").DefaultStore,
     questionStore = DefaultStore("Question");
 
-exports.Question = Model("Question", questionStore, {
+exports.Question = Model(questionStore, {
     properties: {
         text: String,
         skips: Number,

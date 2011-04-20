@@ -1,52 +1,95 @@
-var request = require("./nodules-utils/node-http-client").request,
-	promiseModule = require("./nodules-utils/promise"),
-	when = promiseModule.when,
-	fs = require("./nodules-utils/fs-promise"),
-	system = require("./nodules-utils/system"),
-	Unzip = require("./nodules-utils/unzip").Unzip,
-	zipInflate = require("./nodules-utils/inflate").zipInflate,
-	print = system.print,
-	paths = require.paths,
-	defaultRequire = require,
-	moduleExports = {
-		promise: promiseModule,
-		"fs-promise": fs,
-		"nodules": exports,
-		system: system
-	},
-	modules = {},
+(function(global){
+// create compile function for different platforms
+var compile = typeof process === "object" ? 
+	function(source, name){
+		return require('vm').runInThisContext("(" + source + ")", name);
+	} :
+	typeof Packages === "object" ?
+	function(source, name){
+		return Packages.org.mozilla.javascript.Context.getCurrentContext().compileFunction(global, source, name, 1, null);
+	} : eval;
+	
+
+if(typeof require == "undefined"){
+	// presumably this would only happen from a direct start in rhino
+	var args = global.arguments;
+	// bootstrap require
+	require = makeRequire("file://" + args[0]);
+	require.paths = [];
+}
+var modules = {},
 	factories = {},
 	waitingOn = 0,
 	inFlight = {},
 	monitored = [],
 	overlays = {},
 	callbacks = [],
+	currentModule,
+	currentRequire,
 	useSetInterval = false,
+	monitorModules = true,
 	packages = {},
 	filePathMappings = [],
 	defaultPath = "",
 	main = null,
-	WorkerConstructor = typeof Worker !== "undefined" ? Worker : null;
-	SharedWorkerConstructor = typeof SharedWorker !== "undefined" ? SharedWorker : null;
-	defaultMap = {
-		"http://github.com/([^/]+)/([^/]+)/raw/([^/]+)/(.*)": "zip:http://github.com/$1/$2/zipball/$3!/$4"
+	Unzip = require("./nodules-utils/unzip").Unzip,
+	promiseModule = require("./nodules-utils/promise"),
+	when = promiseModule.when,
+	system = require("./nodules-utils/process"),
+	print = system.print,
+	zipInflate = require("./nodules-utils/inflate").zipInflate,
+	paths = require.paths,
+	defaultRequire = require,
+	allKnownOverlays = {npm: true, narwhal: true, rhino: true, node: true};
+	
+if(typeof process === "undefined"){
+	var request = require("./nodules-utils/rhino-http-client").request,
+		schedule = require("./nodules-utils/rhino-delay").schedule,
+		enqueue = require("event-loop").enqueue,
+		fs = require("./nodules-utils/rhino-fs");
+}else{
+	var request = require("./nodules-utils/node-http-client").request,
+		schedule = require("./nodules-utils/node-delay").schedule,
+		enqueue = process.nextTick,
+		fs = require("./nodules-utils/node-fs");
+}
+var moduleExports = {
+		promise: promiseModule,
+		"fs-promise": fs,
+		"nodules": exports,
+		system: system
 	};
+
 
 function EnginePackage(engine){
 	var enginePackage = this;
 	this.useLocal= function(){
-		try{
-			var packageJson = fs.read("package.json");
-		}catch(e){
-			packageJson = "{}";
+		var packageJson = "{}",
+			path = fs.absolute(".");
+		function findPackage(path){
+			try{
+				packageJson = fs.read(path + "/package.json");
+			}catch(e){
+				if(path.lastIndexOf('/') < 1 && path.lastIndexOf('\\') < 1){
+					throw new Error("Couldn't find package.json");
+				}
+				return findPackage(path.substring(0, Math.max(path.lastIndexOf('/'),path.lastIndexOf('\\'))));
+			}
+			return path;
 		}
+		try{
+			path = findPackage(path);
+		}catch(e){}
 		try{
 			var parsed = JSON.parse(packageJson);
 		}catch(e){
 			e.message += " trying to parse local package.json";
 			throw e;
 		}
-		return enginePackage.usePackage(parsed, "file://" + fs.realpathSync("."));
+		if(path.charAt(path.length - 1) == '\\' || path.charAt(path.length - 1) == '/'){
+			path = path.substring(0, path.length - 1);
+		}
+		return enginePackage.usePackage(parsed, "file://" + path);
 	};
 	this.usePackage= function(packageData, path){
 		processPackage(path, packageData, engine); 
@@ -86,18 +129,71 @@ function EnginePackage(engine){
 	};	
 }
 
+var define = function (id, injects, factory) {
+    if (currentModule == null) {
+      throw new Error("define() may only be called during module factory instantiation");
+    }
+    var module = currentModule;
+    var require = currentRequire;
+    if (!factory) {
+      // two or less arguments
+      factory = injects;
+      if (factory) {
+        // two args
+        if (typeof id === "string") {
+          if (id !== module.id) {
+            throw new Error("Can not assign module to a different id than the current file");
+          }
+          // default injects
+          injects = ["require", "exports", "module"];
+        }
+        else{
+          // anonymous, deps included
+          injects = id;
+        }
+      }
+      else {
+        // only one arg, just the factory
+        factory = id;
+        injects = ["require", "exports", "module"];
+      }
+	}
+    if (typeof factory !== "function"){
+      // we can just provide a plain object
+      return module.exports = factory;
+    }
+    var returned = factory.apply(module.exports, injects.map(function (injection) {
+      switch (injection) {
+        // check for CommonJS injection variables
+        case "require": return require;
+        case "exports": return module.exports;
+        case "module": return module;
+        default:
+          // a module dependency
+          return require(injection);
+      }
+    }));
+    if(returned){
+      // since AMD encapsulates a function/callback, it can allow the factory to return the exports.
+      module.exports = returned;
+    }
+};
+
 packages[""] = exports;
 exports.mappings = [];
 exports.mappings.defaultPath = "";
 
+exports.forBrowser = function(){
+	return new EnginePackage("browser");
+};
 exports.forEngine = function(engine){
 	return new EnginePackage(engine);
-}
+};
 
 exports.ensure = makeRequire("").ensure;
 exports.runAsMain = function(uri){
 	if(!uri || uri.indexOf(":") === -1){
-		uri = "file://" + fs.realpathSync(uri || "lib/index.js");
+		uri = "file://" + fs.absolute(uri || "lib/index.js");
 	}
 	main = modules[uri] = modules[uri] || new Module(uri); 
 	return exports.ensure(uri, function(require){
@@ -113,6 +209,9 @@ function Module(uri){
 }
 
 Module.prototype.supportsUri = true;
+Module.prototype.setExports = function(exports){
+	this.exports = exports;
+}
 
 exports.baseFilePath = system.env.NODULES_PATH || "downloaded-modules";
 try{
@@ -123,6 +222,7 @@ try{
 if(filePathMappingsJson){
 	var filePathMappingsObject = JSON.parse(filePathMappingsJson);
 	useSetInterval = filePathMappingsObject.useSetInterval;
+	monitorModules = filePathMappingsObject.monitorModules !== false;
 	for(var i in filePathMappingsObject){
 		filePathMappings.push({
 			from: RegExp(i),
@@ -161,23 +261,26 @@ function resolveUri(currentId, uri, mappings){
 					return uri.match(/\.\w+$/) ? uri : uri + (getPackage(uri).extension || ".js");
 				}
 			}
-			if(!uri.match(/\.\w+$/)){
-				uri = mappings.defaultPath +uri + (getPackage("").extension || ".js");
+			var packageData = getPackage("");
+			if(!uri.match(/\.\w+$/) && !(packageData.usesSystemModules && packageData.usesSystemModules.indexOf(uri) > -1)){
+				uri = mappings.defaultPath +uri + (packageData.extension || ".js");
 			}
 		}
 		return uri;
 	}
 }
-function getPackage(uri){
+function getPackageUri(uri){
 	if(uri.substring(0,4) == "jar:"){
 		// if it is an archive, the root should be the package URI
-		uri = uri.substring(0, uri.lastIndexOf('!') + 2);
+		return uri.substring(0, uri.lastIndexOf('!') + 2);
 	}
 	else{
 		// else try to base it on the path
-		uri = uri.substring(0, uri.lastIndexOf('/lib/') + 1);
+		return uri.substring(0, uri.lastIndexOf('/lib/') + 1);
 	}
-	return packages[uri] || packages[""];
+}
+function getPackage(uri){
+	return packages[getPackageUri(uri)] || {mappings: packages[""].mappings};
 }
 function makeWorker(Constructor, currentId){
 	return Constructor && function(script, name){
@@ -195,18 +298,33 @@ function makeRequire(currentId){
 			return moduleExports[uri];
 		}
 		if(factories[uri]){
-			var exports = moduleExports[uri] = {};
 			try{
-				var module = modules[uri] = modules[uri] || new Module(uri);
+				var exports = moduleExports[uri] = {},
+					module = currentModule = modules[uri] = modules[uri] || new Module(uri),
+					currentFile = cachePath(uri),
+					factory = factories[uri],
+					originalExports = module.exports = exports,
+					nextRequire = currentRequire = makeRequire(uri);
 				module.dependents[currentId] = true;
-				var currentFile = cachePath(uri);
-				exports = factories[uri].call(exports, makeRequire(uri), exports, module, 
-						currentFile, currentFile.replace(/\/[^\/]*$/,''),
-						makeWorker(WorkerConstructor, uri), makeWorker(SharedWorkerConstructor, uri)) 
+				exports = factory.call(exports, nextRequire, exports, module, define,
+						currentFile, currentFile.replace(/\/[^\/]*$/,'')) 
 							|| exports;
+				if(factory != factories[uri]){
+					// if a module was wrapped with the transport/D than the factory will get replaced
+					exports = factories[uri].call(exports, nextRequire, exports, module, define, 
+							currentFile, currentFile.replace(/\/[^\/]*$/,'')) 
+								|| exports;
+				}
+				if(originalExports != module.exports){
+					exports = module.exports;
+				}
+				Object.defineProperty(module, "exports",{value:exports});
+				moduleExports[uri] = exports;
 				var successful = true;
 			}
 			finally{
+				currentRequire = null;
+				currentModule = null;
 				if(!successful){
 					delete moduleExports[uri];
 				}
@@ -220,44 +338,119 @@ function makeRequire(currentId){
 			}
 		}
 		try{
-			return moduleExports[id] || defaultRequire(id);
+			return moduleExports[id] || defaultRequire(id); 
 		}catch(e){
-			throw new Error("Can not find module " + uri);
+			if(e.message.substring(0, 19) == "Can not find module"){
+				throw new Error("Can not find module " + uri);
+			}
+			if(e.message.substring(0, 28) == "require error: couldn't find"){
+				throw new Error("Can not find module " + uri);
+			}
+			throw e;
 		}
 	};
 	require.main = main;
 	require.define = function(moduleSet, dependencies){
-		require.ensure(dependencies);
+		if(dependencies){
+			require.ensure(dependencies);
+		}
+		var context = getPackageUri(currentId) + "lib/";
 		for(var i in moduleSet){
-			// TODO: Verify that id is an acceptably defined by the requested URL (shouldn't allow cross-domain definitions) 
-			factories[i] = moduleSet[i];
+			var moduleDef = moduleSet[i];
+			factories[context + i + ".js"] = moduleDef.factory || moduleDef;
 		}
 	};
+	require.def = define;
+/*	require.def = function(id, dependencies, factory){
+		if(dependencies){
+			require.ensure(dependencies);
+		}else{
+			factory = dependencies; 
+		}
+		factories[getPackageUri(currentId) + "lib/" + id + ".js"] = function(require, exports, module){
+			return factory.apply(exports, dependencies ? dependencies.map(function(id){
+				switch(id){
+					case "require": return require;
+					case "exports" : return exports;
+					case "module" : return module;
+					default: return require(id);
+				}
+			}) : []);
+		};
+	};*/
 	require.paths = paths;
 	require.reloadable = reloadable;
 	require.resource = function(uri){
 		uri = resolveUri(currentId, uri, getPackage(currentId).mappings);
 		return factories[uri];
 	}
-	require.ensure = function(id, callback){
+	var ensure = require.ensure = function(id, callback){
+		var require = makeRequire(uri);
 		if(id instanceof Array){
-			id.forEach()
+			if(!id.length){
+				return callback && callback();
+			}
+			var uri = resolveUri(currentId, id[0], getPackage(currentId).mappings),
+				require = makeRequire(uri);
+			waitingOn++;
+			if(callback){
+				callbacks.unshift(callback);
+			}
+			try{
+				var results = id.map(ensure);
+			}finally{
+				decrementWaiting();
+			}
+			return results;
 		}
 		var uri = resolveUri(currentId, id, getPackage(currentId).mappings),
 			require = makeRequire(uri),
 			i = 0;
 		if(factories[uri]){
-			if(callback){
+			if(typeof callback == "function"){
 				callback(require);
 			}
 			return;
 		}
-		if(callback){
+		if(typeof callback == "function"){
 			callbacks.unshift(callback);
 		}
-		if(uri.indexOf(':') > 0 && !inFlight[uri]){
-			waitingOn++;
-			inFlight[uri] = true;
+		if(uri.indexOf(':') < 0 || inFlight[uri]){
+			return;
+		}
+		function onError(error){
+			if(uri.indexOf(":") === -1){
+				id = uri;
+				if(id.substring(id.length - 3) == ".js"){
+					id = id.substring(0, id.length - 3);
+				}
+			}
+			try{
+				//check to see if it is a system module
+				moduleExports[id] || defaultRequire(id);
+			}catch(e){
+				factories[uri] = function(){
+					throw new Error(error.stack + " failed to load " + uri);
+				};
+			}				
+			decrementWaiting();
+		}
+		function decrementWaiting(){
+			waitingOn--;
+			if(waitingOn === 0){
+				var calling = callbacks;
+				callbacks = [];
+				inFlight = {};
+				calling.forEach(function(callback){
+					enqueue(function(){
+						callback(require);
+					});
+				});
+			}
+		}
+		waitingOn++;
+		inFlight[uri] = true;
+		try{
 			var source = exports.load(uri, require);
 			return when(source, function(source){
 				try{
@@ -271,6 +464,7 @@ function makeRequire(currentId){
 									createFactory(uri, rewrittenSource);
 									deferred.resolve();
 								}catch(e){
+									e.message += " compiling " + uri;
 									deferred.reject(e);
 								}
 							});
@@ -282,34 +476,10 @@ function makeRequire(currentId){
 				}finally{
 					decrementWaiting();
 				}
-			}, function(error){
-				if(uri.indexOf(":") === -1){
-					id = uri;
-					if(id.substring(id.length - 3) == ".js"){
-						id = id.substring(0, id.length - 3);
-					}
-				}
-				try{
-					//check to see if it is a system module
-					moduleExports[id] || defaultRequire(id);
-				}catch(e){
-					factories[uri] = function(){
-						throw new Error(error.message + " failed to load " + uri);
-					};
-				}				
-				decrementWaiting();
-			});
-			function decrementWaiting(){
-				waitingOn--;
-				if(waitingOn === 0){
-					var calling = callbacks;
-					callbacks = [];
-					inFlight = {};
-					calling.forEach(function(callback){
-						callback(require);
-					});
-				}
-			}
+			}, onError);
+		}
+		catch(e){
+			onError(e);
 		}
 	};
 	return require;
@@ -323,15 +493,31 @@ function processPackage(packageUri, packageData, engine){
 		if(mappings){
 			mappingsArray = mappingsArray.concat(Object.keys(mappings).map(function(key){
 				var to = mappings[key];
-				// if it ends with a slash, only match paths
-				if(to.charAt(to.length - 1) === '/' && key.charAt(key.length - 1) !== '/'){
+				if(typeof to == "string"){
+					if(to.substring(0,5) == "http:"){
+						to = "jar:" + to + "!/lib/";
+					}
+					if(to.substring(0,6) == "https:"){
+						to = "jar:" + to + "!/lib/";
+					}
+					// if it ends with a slash, only match paths
+					if(to.charAt(to.length - 1) === '/' && key.charAt(key.length - 1) !== '/'){
+						key += '/';
+					}
+					// for backwards compatibility with regex exact matches
+					else if(key.charAt(0) === "^" && key.charAt(key.length - 1) === "$"){
+						to += packageData.extension || ".js";
+						key = key.substring(1, key.length - 1);
+					}
+				}else if(to.archive){
+					var libDir = to.descriptor && to.descriptor.directories && to.descriptor.directories.lib;
+					if(typeof libDir != "string"){
+						libDir = "lib";
+					}
 					key += '/';
+					to = to.archive ? "jar:" + to.archive + "!/" + libDir + "/" : to.location;
 				}
-				// for backwards compatibility with regex exact matches
-				else if(key.charAt(0) === "^" && key.charAt(key.length - 1) === "$"){
-					to += packageData.extension || ".js";
-					key = key.substring(1, key.length - 1);
-				}
+				
 				return {
 					from: key,
 					exact: to.match(/\.\w+$/),
@@ -345,7 +531,7 @@ function processPackage(packageUri, packageData, engine){
 	if(packageData.overlay){
 		Object.keys(packageData.overlay).forEach(function(condition){
 			try{
-				var matches = (engine == condition) || eval(condition);
+				var matches = (engine == condition) || !(condition in allKnownOverlays) && eval(condition);
 			}catch(e){}
 			if(matches){
 				addMappings(packageData.overlay[condition].mappings);
@@ -369,7 +555,7 @@ exports.load = function(uri, require){
 	var source = protocolLoader(uri);
 	return when(source, function(source){
 		if(!source){
-			throw new Error("Not found");
+			throw new Error("Not found " + uri);
 		}
 		// check for source defined package URI
 		var packageUri = source.match(/package root: (\w+:.*)/);
@@ -416,6 +602,15 @@ exports.load = function(uri, require){
 						require.ensure(moduleId);
 					}
 				});
+				source.replace(/define\s*\(\s*(\[(?:['"][^'"]*['"],?)+\])\s*\)/, function(t, deps){
+					deps = JSON.parse(deps);
+					if(require){
+						deps.forEach(function(moduleId){
+							require.ensure(moduleId);
+						});
+					}
+				});
+				
 				if(packageData.compiler){
 					require.ensure(packageData.compiler.module);
 				}
@@ -424,13 +619,51 @@ exports.load = function(uri, require){
 		});
 	});
 };
-
 function createFactory(uri, source){
 	try{
-		factories[uri] = compile("(function(require, exports, module, __filename, __dirname, Worker, SharedWorker){" + source + "\n;return exports;})", uri);
+		factories[uri] = compile("function(require, exports, module, define, __filename, __dirname, Worker, SharedWorker){" + source + "\n;return exports;}", uri);
+/*		var indexOfExport, indexOfRequireDef = source.indexOf("define");
+		if(indexOfRequireDef > -1 && ((indexOfExport = source.indexOf("exports.")) == -1 || indexOfExport > indexOfRequireDef)){
+			// looks like it is an Aynchronous module definition module
+			factories[uri]({def: function(id, dependencies, factory){
+				if(!factory){
+					factory = dependencies;
+					if(!factory){
+						factory = id;
+						id = null;
+					}
+					dependencies = null;
+					
+				}
+				if(typeof id == "object"){
+					dependencies = id;
+					id = null;
+				}
+				if(typeof id == "string"){
+					if(uri.indexOf(id) == -1){
+						throw new Error("Can't set another module");
+					}
+				}
+				if(dependencies){
+					makeRequire(uri).ensure(dependencies.filter(function(dep){
+						return !(dep in {require:true, exports:true, module: true});
+					}));
+				}
+				factories[uri] = function(require, exports, module){
+					return factory.apply(exports, dependencies ? dependencies.map(function(id){
+						switch(id){
+							case "require": return require;
+							case "exports" : return exports;
+							case "module" : return module;
+							default: return require(id);
+						}
+					}) : arguments);
+				};
+			}});
+		}*/
 	}catch(e){
 		factories[uri] = function(){
-			throw new Error(e.message + " in " + uri);
+			throw new Error(e.stack + " in " + uri);
 		}
 	}
 }
@@ -438,19 +671,24 @@ exports.protocols = {
 	http: cache(function(uri){
 		return getUri(uri);
 	}, true),
+	https: cache(function(uri){
+		return getUri(uri);
+	}, true),
 	jar: cache(function(uri){
 		uri = uri.substring(4);
 		var exclamationIndex = uri.indexOf("!");
 		var target = uri.substring(exclamationIndex + 2);
-		
 		var targetContents;
 		uri = uri.substring(0, exclamationIndex);
-		return when(fs.stat(cachePath(uri)), function(){
+		return when(fs.stat(cachePath(uri)), function(stat){
+			if(!stat.mtime){
+				return onError();
+			}
 			// archive has already been downloaded, but the file was not found
 			return null;
-		},
-		function(){
-			return when(getUri(uri),function(source){
+		}, onError);
+		function onError(){
+			return when(getUri(uri), function(source){
 				if(source === null){
 					throw new Error("Archive not found " + uri);
 				}
@@ -497,7 +735,7 @@ exports.protocols = {
 				}
 				return targetContents;
 			});
-		});
+		}
 	}),
 	file: function(uri){
 		return readModuleFile(uri.substring(7), uri);
@@ -516,16 +754,25 @@ function getUri(uri, tries){
 	}
 	print("Downloading " + uri + (tries > 1 ? " attempt #" + tries : ""));
 	return requestedUris[uri] = request({url:uri, encoding:"binary"}).then(function(response){
-		if(response.status == 302){
+		if(response.status == 302 || response.status == 301){
 			return getUri(response.headers.location);
 		}
 		if(response.status < 300){
-			return response.body.join("");
+			var body = "";
+			return when(response.body.forEach(function(part){
+				if(!body){
+					body = part;
+				}else{
+					body += part;
+				}
+			}), function(){
+				return body;
+			});
 		}
 		if(response.status == 404){
 			return null;
 		}
-		throw new Error(response.status + response.body);
+		throw new Error(response.status);
 	}, function(error){
 		tries++;
 		if(tries > 3){
@@ -563,7 +810,7 @@ function ensurePath(path){
 	}
 	var path = path.substring(0, index);
 	try{
-		fs.statSync(path);
+		var test = fs.statSync(path).mtime.time;
 	}catch(e){
 		ensurePath(path);
 		fs.mkdirSync(path, 0777);
@@ -572,42 +819,33 @@ function ensurePath(path){
 var watching = {};
 var dontWatch = {};
 
-function promiseReadFileSync(path){
-	var deferred = promiseModule.defer();
-	process.nextTick(function(){
-		try{
-			deferred.resolve(fs.read(path));
-		}catch(e){
-			e.message += " " + path;
-			deferred.reject(e);
-		}
-	});
-	return deferred.promise;
-}
 var watchedFiles;
 function readModuleFile(path, uri){
-	return when(promiseReadFileSync(path), function(source){
-		if(!watching[path] && !dontWatch[uri]){
+	try{
+		var source = fs.read(path);
+		if(monitorModules && !watching[path] && !dontWatch[uri]){
 			watching[path] = true;
 			if(fs.watchFile && !useSetInterval){
 				fs.watchFile(path, {persistent: false, interval: process.platform == "darwin" ? 300 : 0}, possibleChange);
 			}else{
 				if(!watchedFiles){
 					watchedFiles = [];
-					setInterval(function(){
+					schedule(1000).forEach(function(){
 						watchedFiles.forEach(function(watched){
 							if(!watched.pending){
 								watched.pending = true;
 								// a hack to get the OS to reread from the network paths
-								fs.closeSync(fs.openSync(watched.path, "r"));
-								fs.stat(watched.path).then(function(stat){
+								if(fs.closeSync){
+									fs.closeSync(fs.openSync(watched.path, "r"));
+								}
+								when(fs.stat(watched.path), function(stat){
 									watched.pending = false;
 									watched.callback(watched.oldstat, stat);
 									watched.oldstat = stat;
 								}, print);
 							}
 						});
-					}, 300);
+					});
 				}
 				watchedFiles.push({
 					oldstat: fs.statSync(path),
@@ -617,16 +855,30 @@ function readModuleFile(path, uri){
 			}
 		}
 		return source;
-		function possibleChange(oldstat, newstat){
-				if(oldstat.mtime.getTime() !== newstat.mtime.getTime() && waitingOn === 0){
-					print("Reloading " + uri);
-					delete factories[uri];
-					exports.ensure(uri, function(){
-						onFileChange(uri);
-					});
-				}
+	}
+	catch(e){
+		if(path.match(/\.js$/) && typeof process != "undefined"){
+			path = path.replace(/\.js$/,".node");
+			try{
+				fs.read(path);
+				return 'process.dlopen("' + path + '", exports);'; 
 			}
-	});
+			catch(nodeE){
+			}
+		}
+		throw e;
+	}
+	function possibleChange(oldstat, newstat){
+		if(oldstat.mtime.getTime() !== newstat.mtime.getTime() && waitingOn === 0){
+			if(typeof process == "undefined" || !process.env._CHILD_ID_){
+				print("Reloading " + uri);
+			}
+			delete factories[uri];
+			exports.ensure(uri, function(){
+				onFileChange(uri);
+			});
+		}
+	}
 }
 function cachePath(uri){
 	var path = uri;
@@ -636,39 +888,54 @@ function cachePath(uri){
 	filePathMappings.forEach(function(pathMapping){
 		path = path.replace(pathMapping.from, pathMapping.to);
 	});
-	return (path.charAt(0) == '/' ? '' : exports.baseFilePath + '/') + path.replace(/^\w*:(\w*:)?\/\//,'').replace(/!\/?/g,'/').replace(/:/g,'_'); // remove protocol and replace colons and add base file path
+	return ((path.charAt(0) == '/' || path.charAt(1) == ':' || path.substring(0,5) == "file:") ? '' : exports.baseFilePath + '/') + path.replace(/^\w*:(\w*:)?\/\//,'').replace(/!\/?/g,'/'); // remove protocol and replace colons and add base file path
 }
 function cache(handler, writeBack){
 	return function(uri){
-		return when(readModuleFile(cachePath(uri), uri), function(source){
+		try{
+			return when(readModuleFile(cachePath(uri), uri), function(source){
 				if(source === "Not Found"){
 					return null;
 				}
 				return source;
-			}, function(error){
-				var source = handler(uri);
-				if(writeBack){
-					when(source, function(source){
-						var path =cachePath(uri);
-						ensurePath(path);
-						fs.writeFileSync(path, source === null ? "Not Found" : source, "binary");
-					});
-				}
-				return source;
-			});
+			}, onError);
+		}
+		catch(e){
+			return onError(e);
+		}
+		function onError(error){
+			var source = handler(uri);
+			if(writeBack){
+				when(source, function(source){
+					var path = cachePath(uri);
+					ensurePath(path);
+					fs.writeFileSync(path, source === null ? "Not Found" : source, "binary");
+				});
+			}
+			return source;
+		}
 	};
 };
 
 
-// create compile function for different platforms
-var compile = typeof process === "object" ? 
-	process.compile :
-	typeof Package === "object" ?
-	function(source, name){
-		return Packages.org.mozilla.javascript.Context.getCurrentContext().compileFunction(this, source, name, 1, null);
-	} : eval;
-	
-
-if(require.main == module){
-	exports.useLocal().runAsMain(system.args[2]);
+if(typeof process == "undefined"){
+	system.args.unshift(null);
 }
+if(require.main == module){
+	if (system.args[2] === "-refresh") {
+		print("deleting " + exports.baseFilePath);
+ 		require("child_process").exec("rm -r " + exports.baseFilePath, function(err, stdout, stderr) {
+		if (err !== null) {
+			system.print("error deleting directory: " + err);
+		} else {
+			exports.useLocal().runAsMain(system.args[3]);
+		}
+	});
+	} else {
+ 		exports.useLocal().runAsMain(system.args[2]);
+	}
+	if(typeof process === "undefined"){
+		require("event-loop").enterEventLoop();
+	}
+}
+})(this);

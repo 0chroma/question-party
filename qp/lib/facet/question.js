@@ -1,6 +1,6 @@
 
 var Question = require("model/question").Question,
-    Restrictive = require("facet").Restrictive;
+    Restrictive = require("perstore/facet").Restrictive;
 
 exports.PublicFacet = Restrictive(Question, {
     query: function(query, options){

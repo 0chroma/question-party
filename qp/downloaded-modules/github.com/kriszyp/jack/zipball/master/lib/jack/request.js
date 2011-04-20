@@ -1,42 +1,69 @@
 var utils = require("./utils"),
     Hash = require("hash").Hash;
 
-var Request = exports.Request = function(env) {
-    if (env["jack.request"])
-        return env["jack.request"];
-        
-    this.env = env;
-    this.env["jack.request"] = this;
+var Request = exports.Request = function(request) {
+    request.jack = request.jack || {};
+    if (request.jack.request)
+        return request.jack.request;
+    this.raw = request;
+    this.raw.jack.request = this;
 }
 
-Request.prototype.body = function() {
-    if (!this.env["jack.request.body"])
-        this.env["jack.request.body"] = this.env["jsgi.input"].read();
-    
-    return this.env["jack.request.body"];
-};
+// TODO add Request.prototype.input as a backward compatible synonym for body
 
-Request.prototype.scheme          = function() { return this.env["jsgi.url_scheme"];           };
-Request.prototype.scriptName      = function() { return this.env.scriptName;               };
-Request.prototype.pathInfo        = function() { return this.env.pathInfo;                 };
-Request.prototype.port            = function() { return parseInt(this.env["SERVER_PORT"], 10); };
-Request.prototype.requestMethod   = function() { return this.env["REQUEST_METHOD"];            };
-Request.prototype.queryString     = function() { return this.env.queryString;              };
-Request.prototype.referer         = function() { return this.env["HTTP_REFERER"];              };
-Request.prototype.referrer        = Request.prototype.referer;
-Request.prototype.contentLength   = function() { return parseInt(this.env["CONTENT_LENGTH"], 10); };
-Request.prototype.contentType     = function() { return this.env["CONTENT_TYPE"] || null; };
+Object.defineProperty(Request.prototype, "scheme", {configurable: true, enumerable: true,
+    get: function() { return this.raw.scheme; }
+});
+Object.defineProperty(Request.prototype, "scriptName", {configurable: true, enumerable: true,
+    get: function() { return this.raw.scriptName; }
+});
+Object.defineProperty(Request.prototype, "pathInfo", {configurable: true, enumerable: true,
+    get: function() { return this.raw.pathInfo; }
+});
+Object.defineProperty(Request.prototype, "host", {configurable: true, enumerable: true,
+    get: function() {
+        // remove port number
+        return (this.raw.headers.host || this.host).replace(/:\d+\z/g, "");
+    }
+});
+Object.defineProperty(Request.prototype, "port", {configurable: true, enumerable: true,
+    get: function() { return this.raw.port; }
+});
+Object.defineProperty(Request.prototype, "method", {configurable: true, enumerable: true,
+    get: function() { return this.raw.method; }
+});
+Object.defineProperty(Request.prototype, "queryString", {configurable: true, enumerable: true,
+    get: function() { return this.raw.queryString; }
+});
+Object.defineProperty(Request.prototype, "referer", {configurable: true, enumerable: true,
+    get: function() { return this.raw.referer; }
+});
+Object.defineProperty(Request.prototype, "referrer", {configurable: true, enumerable: true,
+    get: function() { return this.raw.referer; }
+});
+Object.defineProperty(Request.prototype, "contentLength", {configurable: true, enumerable: true,
+    get: function() { return parseInt(this.raw.headers["content-length"], 10); }
+});
+Object.defineProperty(Request.prototype, "contentType", {configurable: true, enumerable: true,
+    get: function() { return this.raw.headers["content-type"] || null; }
+});
 
-Request.prototype.host = function() {
-    // Remove port number.
-    return (this.env["HTTP_HOST"] || this.env["SERVER_NAME"]).replace(/:\d+\z/g, "");
-}
-    
-Request.prototype.isGet           = function() { return this.requestMethod() === "GET";        };
-Request.prototype.isPost          = function() { return this.requestMethod() === "POST";       };
-Request.prototype.isPut           = function() { return this.requestMethod() === "PUT";        };
-Request.prototype.isDelete        = function() { return this.requestMethod() === "DELETE";     };
-Request.prototype.isHead          = function() { return this.requestMethod() === "HEAD";       };
+
+Object.defineProperty(Request.prototype, "isGet", {configurable: true, enumerable: true,
+    get: function() { return this.method === "GET"; }
+});
+Object.defineProperty(Request.prototype, "isPost", {configurable: true, enumerable: true,
+    get: function() { return this.method === "POST"; }
+});
+Object.defineProperty(Request.prototype, "isPut", {configurable: true, enumerable: true,
+    get: function() { return this.method === "PUT"; }
+});
+Object.defineProperty(Request.prototype, "isDelete", {configurable: true, enumerable: true,
+    get: function() { return this.method === "DELETE"; }
+});
+Object.defineProperty(Request.prototype, "isHead", {configurable: true, enumerable: true,
+    get: function() { return this.method === "HEAD"; }
+});
 
 // The set of form-data media-types. Requests that do not indicate
 // one of the media types presents in this list will not be eligible
@@ -52,59 +79,64 @@ var FORM_DATA_MEDIA_TYPES = [
 // "application/x-www-form-urlencoded" and "multipart/form-data". The
 // list of form-data media types can be modified through the
 // +FORM_DATA_MEDIA_TYPES+ array.
-Request.prototype.hasFormData = function() {
-    var mediaType = this.mediaType();
-    return FORM_DATA_MEDIA_TYPES.reduce(function(x, type) { return x || type == mediaType; }, false);
-}
+Object.defineProperty(Request.prototype, "hasFormData", {configurable: true, enumerable: true,
+    get: function() {
+        mediaType = this.mediaType;
+        return FORM_DATA_MEDIA_TYPES.reduce(function(x, type) { return x || type == mediaType; }, false);
+    }
+});
 
-// The media type (type/subtype) portion of the CONTENT_TYPE header
-// without any media type parameters. e.g., when CONTENT_TYPE is
+// The media type (type/subtype) portion of the content-type header
+// without any media type parameters. e.g., when content-type is
 // "text/plain;charset=utf-8", the media-type is "text/plain".
 //
 // For more information on the use of media types in HTTP, see:
 // http://www.w3.org/Protocols/rfc2616/rfc2616-sec3.html#sec3.7
-Request.prototype.mediaType = function() {
-    var contentType = this.contentType();
-    return (contentType && contentType.split(/\s*[;,]\s*/, 2)[0].toLowerCase()) || null;
-}
+Object.defineProperty(Request.prototype, "mediaType", {configurable: true, enumerable: true,
+    get: function() {
+        return (this.contentType && this.contentType.split(/\s*[;,]\s*/, 2)[0].toLowerCase()) || null;
+    }
+});
 
 // The media type parameters provided in CONTENT_TYPE as a Hash, or
 // an empty Hash if no CONTENT_TYPE or media-type parameters were
 // provided.  e.g., when the CONTENT_TYPE is "text/plain;charset=utf-8",
 // this method responds with the following Hash:
 //   { 'charset' => 'utf-8' }
-Request.prototype.mediaTypeParams = function() {
-    var contentType = this.contentType();
-    if (!contentType) return {};
-    
-    return contentType.split(/\s*[;,]\s*/).slice(1).map(
-        function (s) { return s.split('=', 2); }).reduce(
-        function (hash, pair) {
+Object.defineProperty(Request.prototype, "mediaTypeParams", {configurable: true, enumerable: true,
+    get: function() {
+        if (!this.contentType) return {};
+        return this.contentType.split(/\s*[;,]\s*/).slice(1).map(function (s) {
+                return s.split('=', 2);
+        }).reduce(function (hash, pair) {
             hash[pair[0].toLowerCase()] = pair[1];
             return hash;
         }, {});
-}
+    }
+});
 
 // The character set of the request body if a "charset" media type
 // parameter was given, or nil if no "charset" was specified. Note
 // that, per RFC2616, text/* media types that specify no explicit
 // charset are to be considered ISO-8859-1.
-Request.prototype.contentCharset = function() {
-    return this.mediaTypeParams()['charset'] || null;
-}
+Object.defineProperty(Request.prototype, "contentCharset", {configurable: true, enumerable: true,
+    get: function() {
+        return this.mediaTypeParams['charset'] || null;
+    }
+});
 
 // Returns the data recieved in the query string.
 Request.prototype.GET = function() {
     // cache the parsed query:
-    if (this.env["jack.request.query_string"] !== this.queryString()) {
-        this.env["jack.request.query_string"] = this.queryString();
-        this.env["jack.request.query_hash"] = utils.parseQuery(this.queryString());
+    if (this.raw.jack.request.query_string !== this.queryString) {
+        this.raw.jack.request.query_string = this.queryString;
+        this.raw.jack.request.query_hash = utils.parseQuery(this.queryString);
     }
-    
+    print(this.raw.jack.request.query_string)
     if (arguments.length > 0)
-        return this.env["jack.request.query_hash"][arguments[0]];
+        return this.raw.jack.request.query_hash[arguments[0]];
         
-    return this.env["jack.request.query_hash"];
+    return this.raw.jack.request.query_hash;
 }
 
 // Returns the data recieved in the request body.
@@ -132,41 +164,46 @@ Request.prototype.POST = function(options) {
     return hash;
 }
 
-Request.prototype.isFormEncoded = function() {
-    var contentType = this.env["CONTENT_TYPE"];
-    var isAppFormEncoded = /^application\/x-www-form-urlencoded/;
-    var isMultipartFormEncoded = /^multipart\/form-data.*boundary=\"?([^\";,]+)\"?/m;
-    return isMultipartFormEncoded.test(contentType) || isAppFormEncoded.test(contentType);
-}
+Object.defineProperty(Request.prototype, "isFormEncoded", {configurable: true, enumerable: true,
+    get: function() {
+        var isAppFormEncoded = /^application\/x-www-form-urlencoded/;
+        var isMultipartFormEncoded = /^multipart\/form-data.*boundary=\"?([^\";,]+)\"?/m;
+        return isMultipartFormEncoded.test(this.contentType) || isAppFormEncoded.test(this.contentType);
+    }
+});
+
+
 
 Request.prototype.params = function() {
-    if (!this.env["jack.request.params_hash"])
-        this.env["jack.request.params_hash"] = Hash.merge(this.GET(), this.POST());
+    if (!this.raw.jack.request.params_hash)
+        this.raw.jack.request.params_hash = Hash.merge(this.GET(), this.POST());
 
     if (arguments.length > 0)
-        return this.env["jack.request.params_hash"][arguments[0]];
+        return this.raw.jack.request.params_hash[arguments[0]];
             
-    return this.env["jack.request.params_hash"];
+    return this.raw.jack.request.params_hash;
 }
 
-Request.prototype.cookies = function() {
-    if (!this.env["HTTP_COOKIE"]) return {};
-
-    if (this.env["jack.request.cookie_string"] != this.env["HTTP_COOKIE"])  {
-        this.env["jack.request.cookie_string"] = this.env["HTTP_COOKIE"]
-        // According to RFC 2109:
-        // If multiple cookies satisfy the criteria above, they are ordered in
-        // the Cookie header such that those with more specific Path attributes
-        // precede those with less specific. Ordering with respect to other
-        // attributes (e.g., Domain) is unspecified.
-        var hash = this.env["jack.request.cookie_hash"] = utils.parseQuery(this.env["HTTP_COOKIE"], /[;,]/g);
-        for (var k in hash)
-            if (Array.isArray(hash[k]))
-                hash[k] = hash[k][0];
+Object.defineProperty(Request.prototype, "cookies", {configurable: true, enumerable: true,
+    get: function() {
+        var cookie = this.raw.headers.cookie;
+        if (!cookie) return {};
+        if (this.raw.jack.request.cookie_string != cookie)  {
+            this.env["jack.request.cookie_string"] = cookie;
+            // According to RFC 2109:
+            // If multiple cookies satisfy the criteria above, they are ordered in
+            // the Cookie header such that those with more specific Path attributes
+            // precede those with less specific. Ordering with respect to other
+            // attributes (e.g., Domain) is unspecified.
+            var hash = this.raw.jack.request.cookie_hash = utils.parseQuery(cookie, /[;,]/g);
+            for (var k in hash)
+                if (Array.isArray(hash[k]))
+                    hash[k] = hash[k][0];
+        }
+    
+        return this.raw.jack.request.cookie_hash;
     }
-
-    return this.env["jack.request.cookie_hash"];
-}
+});
 
 /**
  * Get the cookie named 'key'. The dual method of Response.setCookie().
@@ -175,35 +212,37 @@ Request.prototype.getCookie = function (key) {
     return this.cookies()[key];
 }
 
-Request.prototype.relativeURI = function() {
-    var qs = this.queryString();
-    
-    if (qs) {
-        return this.pathInfo() + "?" + qs;
-    } else {
-        return this.pathInfo();
+Object.defineProperty(Request.prototype, "relativeURI", {configurable: true, enumerable: true,
+    get: function() {
+        var qs = this.queryString;
+        if (qs) {
+            return this.pathInfo + "?" + qs;
+        } else {
+            return this.pathInfo;
+        }
     }
-}
+});
 
-Request.prototype.uri = function() {
-    var scheme = this.scheme(),
-        port = this.port(),
-        uri = scheme + "://" + this.host();
-
-    if ((scheme == "https" && port != 443) || (scheme == "http" && port != 80)) {
-        url = uri + port;
+Object.defineProperty(Request.prototype, "uri", {configurable: true, enumerable: true,
+    get: function() {
+        var scheme = this.scheme(),
+            port = this.port(),
+            uri = scheme + "://" + this.host;
+        if ((scheme == "https" && port != 443) || (scheme == "http" && port != 80)) {
+            uri = uri + port;
+        }
+        return uri + this.relativeURI;
     }
-
-    return uri + this.relativeURI();
-}
+});
 
 var XHR_RE = new RegExp("XMLHttpRequest", "i");
 
 // http://www.dev411.com/blog/2006/06/30/should-there-be-a-xmlhttprequest-user-agent
-Request.prototype.isXHR = Request.prototype.isXMLHTTPRequest = function() {
-    return XHR_RE.test(this.env["HTTP_X_REQUESTED_WITH"]);
-}
-
+Object.defineProperty(Request.prototype, "isXMLHTTPRequest", {configurable: true, enumerable: true,
+    get: function() {
+        return XHR_RE.test(this.raw.headers["x-requested-with"]);
+    }
+});
 
 /**
  * Returns an array of [encoding, quality] pairs.
@@ -218,15 +257,22 @@ Request.prototype.acceptEncoding = function() {
 }
 
 /**
- * The remore ip address.
+ * The remote ip address.
  */
-Request.prototype.ip = Request.prototype.remoteAddr = function() {
-    var addr = this.env["HTTP_X_FORWARDED_FOR"];
+var remoteIp = function() {
+    var addr = this.raw.headers["x-forwarded-for"];
     if (addr) {
         var parts = addr.split(",");
         return parts[parts.length-1].trim();
     } else {
-        return this.env["REMOTE_ADDR"];    
+        return this.remoteAddr;
     }
 }
 
+Object.defineProperty(Request.prototype, "ip", {configurable: true, enumerable: true,
+    get: remoteIp
+});
+
+Object.defineProperty(Request.prototype, "remoteAddr", {configurable: true, enumerable: true,
+    get: remoteIp
+});

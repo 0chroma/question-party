@@ -3,8 +3,8 @@
  */
 
 var Page = require("model/page").Page,
-	Permissive = require("facet").Permissive,
-	Restrictive = require("facet").Restrictive;
+	Permissive = require("perstore/facet").Permissive,
+	Restrictive = require("perstore/facet").Restrictive;
 
 
 // These are the different facets that are available for accessing this data
@@ -16,22 +16,21 @@ exports.PublicFacet = Restrictive(Page, {
 		Page.checkQuery(query);
 		return Page.query(query, options);
 	},
-	prototype: {
+	subscribe: function(){
+		return Page.subscribe.apply(Page, arguments);
 	},
-	quality:0.5
-	
+	prototype: {
+	}
 });
 
 // This facet has for authenticated users and grants read and write capabilities
 exports.UserFacet = Permissive(Page, {
 	properties: {
-	},
-	quality: 1
+	}
 });
 
 // This facet is for administrators and grants full access to data
 exports.AdminFacet = Permissive(Page, {
 	properties: {
-	},
-	quality: 1
+	}
 });

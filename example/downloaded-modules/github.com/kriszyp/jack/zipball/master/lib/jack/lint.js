@@ -1,5 +1,4 @@
-var utils = require("./utils"),
-    HashP = require("hashp").HashP;
+var utils = require("./utils");
 
 var Lint = exports.Lint = function(app) {
     return function(request) {
@@ -53,7 +52,8 @@ Lint.Context.prototype.checkRequest = function(request) {
     if (request && typeof request !== "object" || request.constructor !== Object)
         throw new Error("request is not a hash");
     
-    ["method","serverName","serverPort","queryString","input","scheme","jsgi"
+    
+["method","host","port","queryString","body","scheme","jsgi"
     ].forEach(function(key) {
         if (request[key] === undefined)
             throw new Error("request missing required key " + key);
@@ -176,7 +176,7 @@ Lint.Context.prototype.checkContentType = function(status, headers) {
         throw new Error("No content-type header found");
 }
 Lint.Context.prototype.checkContentLength = function(status, headers, request) {
-    var chunked_response = (HashP.includes(headers, "transfer-encoding") && HashP.get(headers, "transfer-encoding") !== 'identity');
+    var chunked_response = headers["transfer-encoding"] && headers["transfer-encoding"] !== "identity";
     
     var value = headers["content-length"];
     if (value) {
@@ -189,7 +189,7 @@ Lint.Context.prototype.checkContentLength = function(status, headers, request) {
         if (chunked_response)
             throw new Error("A content-length header should not be used if body is chunked");
         
-        if (typeof value.forEach === "function")
+        if (typeof value !== "string")
             throw new Error("A content-length header value must be be singular")
         
         var bytes = 0,

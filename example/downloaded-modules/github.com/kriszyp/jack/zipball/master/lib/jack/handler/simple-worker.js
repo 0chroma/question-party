@@ -4,6 +4,8 @@ var IO = require("io").IO,
     HTTP_STATUS_CODES = require("../utils").HTTP_STATUS_CODES,
     HashP = require("hashp").HashP,
     jackup = require("jackup"),
+    ByteString = require("binary").ByteString,
+    ByteArray = require("binary").ByteArray,
     parse = require("uri").parse;
 
 onconnect = function (e) {
@@ -15,6 +17,7 @@ onstart = function(options){
     exports.options = options;
     jackup.start(options);
 };
+
 
 exports.run = function(app, options) {
 	 
@@ -62,16 +65,33 @@ exports.run = function(app, options) {
         if (cAddr = request.getClientAddress())
             req.remoteHost      = String(cAddr.getHostName() || cAddr.getAddress() || "");
 
-        req.body = {
-        	forEach: function(callback) {
-        		var reader = new Packages.java.io.InputStreamReader(request.getInputStream(), this.encoding || "UTF-8");
-        		var buffer;
-        		var bytesRead;
-        		while((bytesRead = reader.read(buffer = Packages.java.nio.CharBuffer.allocate(4096))) > -1){
-	        		callback(String(new Packages.java.lang.String(buffer.array(), 0, bytesRead)));
-        		}
+        req.body = new IO(request.getInputStream(), null);
+        
+    	req.body.forEach = function(callback) {
+    		var readLength,
+    			buffer = new ByteArray(4096);
+
+    		while((readLength = IO.prototype.readInto.call(this, buffer, 4096, 0)) > 0){
+    			var data = new ByteString(buffer._bytes, 0, readLength);
+    			callback(data.decodeToString(this.encoding || "UTF-8"));
+    		}
+    	};
+        var is;
+        function read(length){
+        	if(!is){
+        		is = request.getInputStream();
         	}
-        };
+        	
+    		if(!length){
+    			length = 4096;
+    		}
+    		var buffer = Packages.java.lang.reflect.Array.newInstance(java.lang.Byte.TYPE, length);
+    		var bytesRead = is.read(buffer);
+    		return {
+    			length: bytesRead,
+    			bytes: buffer
+    		}
+    	}
         req.jsgi={version: [0, 3],
             errors: system.stderr,
             multithread: false,
@@ -86,29 +106,36 @@ exports.run = function(app, options) {
         // efficiently serve files if the server supports it
         req["x-sendfile"] = "yes";
         // call the app
-        var res = app(req);
         var output, responseStarted = false;
-
-        // use the promise manager to determine when the app is done
-        // in a normal sync request, it will just execute the fulfill
-        // immediately
-        when(res, function(res){
-                // success handler
-                
-                try{
-                handleResponse(res);
-            }
-            catch(e){
-                response.getOutputStream().write(e);
-            }
-            
-            // finished
-            response.getOutputStream().close();
-            }, function(error){
+        try{
+        	var res = app(req);
+	
+	        // use the promise manager to determine when the app is done
+	        // in a normal sync request, it will just execute the fulfill
+	        // immediately
+	        when(res, function(res){
+	            // success handler
+	                
+	            try{
+	                handleResponse(res);
+	            }
+	            catch(e){
+	            	print(String((e.rhinoException && e.rhinoException.printStackTrace()) || (e.name + ": " + e.message)));
+	                response.getOutputStream().write(e);
+		            response.getOutputStream().close();
+	            }
+	        }, onError);
+        }catch(e){
+        	onError(e);
+        }
+		function onError(error){
                 // unhandled error
-            handleResponse({status:500, headers:{}, body:[error.message]});
-            });
-
+            try{
+            	handleResponse({status:500, headers:{}, body:[error.message]});
+            }catch(e){
+            	print(String((error.rhinoException && error.rhinoException.printStackTrace()) || (error.name + ": " + error.message)));
+            }
+        }
         function handleResponse(res){
             // set the status
             response.setCode(res.status);
@@ -154,7 +181,6 @@ exports.run = function(app, options) {
                         // with async/promises, it would actually be more ideal to set the headers
                         // and status here before the first write, so that a promise could suspend
                         // and then set status when it resumed
-                        
                         output.write(chunk);
                         
                         if (chunked)
@@ -178,7 +204,7 @@ exports.run = function(app, options) {
                 }
                 else {
                     // not a promise, regular sync request, we are done now
-                    output.close();
+                   output.close();
                 }
             }
             catch(e){
@@ -186,6 +212,7 @@ exports.run = function(app, options) {
                 if(chunked){
                     output.flush();
                 }
+                output.close();
             }
 
 

@@ -84,13 +84,7 @@ function createWorker(scriptName, setup, workerName){
     workerEngine.spawn(function(){
         sandbox.main(scriptName);
         // enter the event loop
-        workerQueue.enterEventLoop(function(){
-	    queue.enqueue(function(){
-	       if(worker && worker.onidle){
-		       worker.onidle();
-	       }
-	    });
-	});
+        workerQueue.enterEventLoop();
     }, workerName || scriptName);
 };
 

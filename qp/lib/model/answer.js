@@ -1,8 +1,8 @@
-var Model = require("model").Model,
+var Model = require("perstore/model").Model,
     DefaultStore = require("perstore/stores").DefaultStore,
     answerStore = DefaultStore("Answer");
 
-exports.Answer = Model("Answer", answerStore, {
+exports.Answer = Model(answerStore, {
     properties: {
         text: String,
         score: Number,

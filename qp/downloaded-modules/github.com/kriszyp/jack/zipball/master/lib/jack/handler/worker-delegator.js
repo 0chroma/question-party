@@ -1,6 +1,6 @@
 // Creates a pool of workers and delegates requests to workers as they become idle
 
-var SharedWorker = require("worker").SharedWorker,
+var Worker = require("worker").Worker,
     HTTP_STATUS_CODES = require("../utils").HTTP_STATUS_CODES,
     spawn = require("worker-engine").spawn,
     requestQueue;
@@ -24,12 +24,17 @@ exports.createWorkers = function(workerModule, options) {
     var workerIds = [];
     function addWorker(){
         var i = workers.length;
-        workers[i] = null;
-        var workerThread = spawn(function(){
-            var newWorker = (new SharedWorker("jack/handler/" + workerModule, workerIds[i] = "Jack worker " + Math.random())).port;
-            newWorker.__enqueue__("onstart", [options]);
-/*            workers.forEach(function(worker){
-            	worker.postMessage({
+        var newWorker = new Worker("jack/handler/" + workerModule, workerIds[i] = "Jack worker " + i);
+        var optionsCopy = {};
+        for(var key in options){
+        	optionsCopy[key] = options[key];
+        }
+        if(i == 0){
+        	optionsCopy.firstWorker = true;
+        }
+        newWorker.__enqueue__("onstart", [optionsCopy]);
+        workers.forEach(function(worker){
+/*            	worker.postMessage({
             		method:"subscribe",
             		body:{
             			target: "worker://" + newWorker.name
@@ -40,12 +45,21 @@ exports.createWorkers = function(workerModule, options) {
             		body:{
             			target: "worker://" + worker.name
             		}
-            	});
-            	//worker.__enqueue__("onnewworker", newWorker.name);
-            	//newWorker.__enqueue__("onnewworker", worker.name);
-            });*/
-            workers[i] = newWorker;
+            	});*/
+            var connectionA = {
+        		send: function(message){
+        			newWorker.__enqueue__("onsiblingmessage", [message, connectionB]);
+        		}
+        	};
+            var connectionB = {
+        		send: function(message){
+        			worker.__enqueue__("onsiblingmessage", [message, connectionA]);
+        		}
+        	};
+        	worker.__enqueue__("onnewworker", [connectionA]);
+        	newWorker.__enqueue__("onnewworker", [connectionB]);
         });
+        workers[i] = newWorker;
     }
     addWorker(); // create at least one to start with
     
@@ -66,7 +80,6 @@ exports.createWorkers = function(workerModule, options) {
 			}
 		}
 	};*/
-	
     requestProcess:
     while(true){
         var requestResponse = requestQueue.take(); // get the next request
